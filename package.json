@@ -1,0 +1,23 @@
+{
+  "name": "ciphered-souls-private-server",
+  "version": "0.1.0",
+  "description": "Ciphered Souls private server foundation: owner console, item templates, valuation, and browser testing shell.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "CIPHERED_SOULS_ENV=DEV node src/server.js",
+    "validate": "node scripts/validate-data.js",
+    "test": "node scripts/validate-data.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ciphered-souls",
+    "rsps",
+    "private-server",
+    "owner-console"
+  ],
+  "license": "UNLICENSED"
+}
