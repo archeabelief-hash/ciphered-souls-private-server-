@@ -1,26 +1,31 @@
 const { app, BrowserWindow } = require('electron');
-const { spawn } = require('child_process');
+const path = require('path');
+const { startServer } = require(path.join(__dirname, '..', 'src', 'server'));
 
-let serverProcess;
+let mainWindow;
+let serverInstance;
 
-function createWindow() {
-  const win = new BrowserWindow({
+async function createWindow() {
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true
+    }
   });
 
-  setTimeout(() => {
-    win.loadURL('http://localhost:8787?v=desktop');
-  }, 2000);
+  try {
+    serverInstance = await startServer(8787, '127.0.0.1');
+    await mainWindow.loadURL('http://127.0.0.1:8787/index.html');
+  } catch (error) {
+    console.error('Failed to start server:', error);
+  }
 }
 
-app.whenReady().then(() => {
-  serverProcess = spawn('npm', ['run', 'dev'], { shell: true });
-  createWindow();
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (serverProcess) serverProcess.kill();
+  if (serverInstance) serverInstance.close();
   if (process.platform !== 'darwin') app.quit();
 });
