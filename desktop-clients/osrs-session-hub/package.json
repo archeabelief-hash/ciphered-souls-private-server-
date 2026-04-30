@@ -1,0 +1,24 @@
+{
+  "name": "osrs-session-hub",
+  "version": "0.1.0",
+  "description": "Safe OSRS desktop session/window manager. Launches and arranges official/RuneLite clients without gameplay automation.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "@nut-tree-fork/win-control": "^4.0.1",
+    "electron": "^29.4.6"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "osrs",
+    "runelite",
+    "desktop",
+    "session-manager",
+    "window-manager"
+  ],
+  "license": "UNLICENSED"
+}
