@@ -3,22 +3,56 @@
 <head>
   <title>OSRS Session Hub</title>
   <style>
-    body { background:#111; color:#fff; font-family:Arial; }
+    body { background:#0b0b0b; color:#fff; font-family:Arial; }
     button { padding:10px; margin:5px; }
+    .panel { border:1px solid #333; padding:10px; margin:10px; }
   </style>
 </head>
 <body>
-  <h1>OSRS Session Hub</h1>
+  <h1>OSRS CONTROL DASHBOARD</h1>
 
-  <input id="clientPath" placeholder="Path to RuneLite.exe or OSRS client" style="width:80%" />
-  <button onclick="launch()">Launch Client</button>
+  <div class="panel">
+    <input id="clientPath" placeholder="RuneLite path" style="width:70%" />
+    <button onclick="launch()">Launch</button>
+  </div>
+
+  <div class="panel">
+    <button onclick="detect()">Detect Clients</button>
+    <button onclick="tile()">Auto Tile</button>
+    <pre id="output"></pre>
+  </div>
+
+  <div class="panel">
+    <h3>Timers</h3>
+    <button onclick="startTimer(3600)">Birdhouse (60m)</button>
+    <button onclick="startTimer(4800)">Herb Run (80m)</button>
+    <div id="timers"></div>
+  </div>
 
   <script>
     const { ipcRenderer } = require('electron');
 
     function launch(){
-      const path = document.getElementById('clientPath').value;
-      ipcRenderer.invoke('launch-client', path);
+      ipcRenderer.invoke('launch-client', document.getElementById('clientPath').value);
+    }
+
+    async function detect(){
+      const data = await ipcRenderer.invoke('detect-windows');
+      document.getElementById('output').innerText = data;
+    }
+
+    function tile(){
+      ipcRenderer.invoke('tile-windows');
+    }
+
+    function startTimer(seconds){
+      const el = document.createElement('div');
+      document.getElementById('timers').appendChild(el);
+      let s = seconds;
+      setInterval(()=>{
+        s--;
+        el.innerText = 'Timer: ' + s + 's';
+      },1000);
     }
   </script>
 </body>
