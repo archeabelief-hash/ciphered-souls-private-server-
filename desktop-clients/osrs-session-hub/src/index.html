@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OSRS Session Hub</title>
+  <style>
+    body { background:#111; color:#fff; font-family:Arial; }
+    button { padding:10px; margin:5px; }
+  </style>
+</head>
+<body>
+  <h1>OSRS Session Hub</h1>
+
+  <input id="clientPath" placeholder="Path to RuneLite.exe or OSRS client" style="width:80%" />
+  <button onclick="launch()">Launch Client</button>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    function launch(){
+      const path = document.getElementById('clientPath').value;
+      ipcRenderer.invoke('launch-client', path);
+    }
+  </script>
+</body>
+</html>
