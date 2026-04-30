@@ -1,0 +1,28 @@
+name: Windows Client Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-client:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm install
+
+      - name: Build Windows Installer
+        run: npm run dist:win
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ciphered-Souls-Windows-Installer
+          path: release/**
