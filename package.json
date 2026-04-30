@@ -9,29 +9,18 @@
     "dev": "CIPHERED_SOULS_ENV=DEV node src/server.js",
     "client": "electron desktop/main.js",
     "desktop": "electron desktop/main.js",
-    "pack:win": "electron-builder --win --dir",
-    "dist:win": "electron-builder --win nsis --x64",
+    "pack:win": "electron-builder --win --dir --publish=never",
+    "dist:win": "electron-builder --win nsis --x64 --publish=never",
     "validate": "node scripts/validate-data.js",
     "test": "node scripts/validate-data.js"
   },
   "build": {
     "appId": "com.cipheredsouls.client",
     "productName": "Ciphered Souls",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "desktop/**/*",
-      "src/**/*",
-      "public/**/*",
-      "data/**/*",
-      "package.json"
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ]
-    },
+    "directories": { "output": "release" },
+    "files": ["desktop/**/*", "src/**/*", "public/**/*", "data/**/*", "package.json"],
+    "win": { "target": ["nsis"] },
+    "publish": null,
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -44,8 +33,6 @@
     "electron": "latest",
     "electron-builder": "latest"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "engines": { "node": ">=18.0.0" },
   "license": "UNLICENSED"
 }
