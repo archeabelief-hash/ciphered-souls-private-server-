@@ -55,7 +55,7 @@ jobs:
           set -euxo pipefail
           cd "$RSPS_ROOT"
           rm -rf data
-          ./gradlew :server:setupServer --stacktrace | tee "$GITHUB_WORKSPACE/server-setup.log"
+          ./gradlew ':server:setup server' --stacktrace | tee "$GITHUB_WORKSPACE/server-setup.log"
           test -f data/configs/server.toml
           test -d data/cache
           grep -nE 'server-name|revision|address|port' data/configs/server.toml || true
@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euxo pipefail
           cd "$RSPS_ROOT"
-          nohup ./gradlew :server:runServer --stacktrace > "$GITHUB_WORKSPACE/server-runtime.log" 2>&1 &
+          nohup ./gradlew ':server:run server' --stacktrace > "$GITHUB_WORKSPACE/server-runtime.log" 2>&1 &
           echo $! > "$GITHUB_WORKSPACE/server.pid"
 
           ok=0
