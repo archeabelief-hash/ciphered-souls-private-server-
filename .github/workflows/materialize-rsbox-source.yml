@@ -1,9 +1,6 @@
 name: Materialize RSBox Source
 
 on:
-  push:
-    branches:
-      - mobile-rsps-integration
   workflow_dispatch:
 
 permissions:
@@ -11,7 +8,6 @@ permissions:
 
 jobs:
   materialize:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -24,7 +20,10 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          test -f rsbox-master.zip
+          if [ ! -f rsbox-master.zip ]; then
+            echo 'rsbox-master.zip is already materialized or not present; nothing to do.'
+            exit 0
+          fi
           rm -rf .materialize rsps/rsbox
           mkdir -p .materialize rsps/rsbox
           unzip -q rsbox-master.zip -d .materialize
@@ -42,7 +41,7 @@ jobs:
           set -euxo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A rsps rsbox-master.zip
+          git add -A rsps rsbox-master.zip || true
           if git diff --cached --quiet; then
             echo 'No source changes to commit.'
             exit 0
