@@ -1,0 +1,116 @@
+name: RSPS Integration Test
+
+on:
+  push:
+    branches:
+      - mobile-rsps-integration
+  workflow_dispatch:
+
+jobs:
+  server-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Extract RSBox source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-rsps
+          mkdir -p .ci-rsps
+          unzip -q rsbox-master.zip -d .ci-rsps
+          ROOT="$(find .ci-rsps -maxdepth 2 -type f -name gradlew -printf '%h\n' | head -n1)"
+          test -n "$ROOT"
+          echo "RSPS_ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "Detected RSPS root: $ROOT"
+          ls -la "$ROOT"
+
+      - name: Verify Gradle project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$RSPS_ROOT"
+          chmod +x gradlew
+          ./gradlew --version
+          ./gradlew :server:tasks --all | tee "$GITHUB_WORKSPACE/gradle-server-tasks.log"
+
+      - name: Compile server
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$RSPS_ROOT"
+          ./gradlew :server:compileKotlin --stacktrace | tee "$GITHUB_WORKSPACE/server-compile.log"
+
+      - name: Set up revision 217 cache and RSA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$RSPS_ROOT"
+          rm -rf data
+          ./gradlew :server:setupServer --stacktrace | tee "$GITHUB_WORKSPACE/server-setup.log"
+          test -f data/configs/server.toml
+          test -d data/cache
+          grep -nE 'server-name|revision|address|port' data/configs/server.toml || true
+
+      - name: Start server and verify game port
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "$RSPS_ROOT"
+          nohup ./gradlew :server:runServer --stacktrace > "$GITHUB_WORKSPACE/server-runtime.log" 2>&1 &
+          echo $! > "$GITHUB_WORKSPACE/server.pid"
+
+          ok=0
+          for i in $(seq 1 120); do
+            if (echo > /dev/tcp/127.0.0.1/43594) >/dev/null 2>&1; then
+              ok=1
+              break
+            fi
+            if ! kill -0 "$(cat "$GITHUB_WORKSPACE/server.pid")" 2>/dev/null; then
+              echo 'Server process exited before port opened.'
+              cat "$GITHUB_WORKSPACE/server-runtime.log"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            echo 'Timed out waiting for TCP port 43594.'
+            cat "$GITHUB_WORKSPACE/server-runtime.log"
+            ss -ltnp || true
+            exit 1
+          fi
+
+          echo 'SERVER_PORT_43594_OK=1' | tee "$GITHUB_WORKSPACE/smoke-test-result.txt"
+          ss -ltnp | tee -a "$GITHUB_WORKSPACE/smoke-test-result.txt" || true
+          tail -n 200 "$GITHUB_WORKSPACE/server-runtime.log"
+
+      - name: Preserve non-secret diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsps-integration-diagnostics
+          if-no-files-found: ignore
+          path: |
+            gradle-server-tasks.log
+            server-compile.log
+            server-setup.log
+            server-runtime.log
+            smoke-test-result.txt
+
+      - name: Stop server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f server.pid ]; then
+            kill "$(cat server.pid)" 2>/dev/null || true
+          fi
