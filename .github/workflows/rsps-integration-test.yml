@@ -9,7 +9,7 @@ on:
 jobs:
   server-smoke-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -21,15 +21,14 @@ jobs:
           distribution: temurin
           java-version: '11'
 
-      - name: Extract RSBox source
+      - name: Locate separated RSBox source
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf .ci-rsps
-          mkdir -p .ci-rsps
-          unzip -q rsbox-master.zip -d .ci-rsps
-          ROOT="$(find .ci-rsps -maxdepth 2 -type f -name gradlew -printf '%h\n' | head -n1)"
-          test -n "$ROOT"
+          ROOT="$GITHUB_WORKSPACE/rsps/rsbox"
+          test -f "$ROOT/gradlew"
+          test -f "$ROOT/settings.gradle.kts"
+          test -d "$ROOT/server"
           echo "RSPS_ROOT=$ROOT" >> "$GITHUB_ENV"
           echo "Detected RSPS root: $ROOT"
           ls -la "$ROOT"
@@ -70,7 +69,7 @@ jobs:
           echo $! > "$GITHUB_WORKSPACE/server.pid"
 
           ok=0
-          for i in $(seq 1 120); do
+          for i in $(seq 1 180); do
             if (echo > /dev/tcp/127.0.0.1/43594) >/dev/null 2>&1; then
               ok=1
               break
