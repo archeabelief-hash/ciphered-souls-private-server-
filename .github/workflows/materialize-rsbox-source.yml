@@ -1,0 +1,51 @@
+name: Materialize RSBox Source
+
+on:
+  push:
+    branches:
+      - mobile-rsps-integration
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: mobile-rsps-integration
+          fetch-depth: 0
+
+      - name: Extract source into rsps/rsbox
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f rsbox-master.zip
+          rm -rf .materialize rsps/rsbox
+          mkdir -p .materialize rsps/rsbox
+          unzip -q rsbox-master.zip -d .materialize
+          ROOT="$(find .materialize -maxdepth 2 -type f -name gradlew -printf '%h\n' | head -n1)"
+          test -n "$ROOT"
+          cp -a "$ROOT"/. rsps/rsbox/
+          rm -rf .materialize
+          rm -f rsbox-master.zip
+          find rsps/rsbox -name .gradle -type d -prune -exec rm -rf {} + || true
+          find rsps/rsbox -name build -type d -prune -exec rm -rf {} + || true
+
+      - name: Commit separated source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A rsps rsbox-master.zip
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Separate RSPS source from archive'
+          git push origin HEAD:mobile-rsps-integration
