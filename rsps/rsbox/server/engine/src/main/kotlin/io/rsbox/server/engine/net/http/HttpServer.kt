@@ -26,11 +26,14 @@ class HttpServer {
     fun start() {
         Logger.info("Starting internal HTTP server.")
 
-        val socketAddress = InetSocketAddress(ServerConfig.NETWORK.ADDRESS, 80)
+        // Port 80 requires elevated privileges on Linux runners/containers. Keep the
+        // private-server jav_config endpoint on an unprivileged port so the exact
+        // same server build can run locally, in CI, Codespaces and containers.
+        val socketAddress = InetSocketAddress(ServerConfig.NETWORK.ADDRESS, 8080)
         bootstrap.bind(socketAddress).sync().addListener {
             if(!it.isSuccess) {
                 Logger.error(it.cause()) { "Failed to bind HTTP server to address: ${socketAddress.hostString}:${socketAddress.port}."}
-                exitProcess(0)
+                exitProcess(1)
             }
         }
     }
