@@ -1,14 +1,14 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.0"
+    kotlin("jvm") version "2.2.10"
     id("org.zeroturnaround.gradle.jrebel") version "1.1.12" apply false
 }
 
 val jrebel: String by ext
 
 tasks.wrapper {
-    gradleVersion = "8.2.1"
+    gradleVersion = "8.14.3"
 }
 
 allprojects {
@@ -43,8 +43,8 @@ allprojects {
     }
 
     tasks.withType<KotlinCompile> {
-        kotlinOptions {
-            freeCompilerArgs = listOf("-Xallow-any-scripts-in-source-roots")
+        compilerOptions {
+            freeCompilerArgs.add("-Xallow-any-scripts-in-source-roots")
         }
     }
 }
