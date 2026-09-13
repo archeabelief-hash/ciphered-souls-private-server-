@@ -20,7 +20,6 @@ jobs:
           unzip -q part00.zip -d p0
           unzip -q part01.zip -d p1
           unzip -q part02.zip -d p2
-          find p0 p1 p2 -maxdepth 2 -type f -printf '%p %s\n'
           cat p0/* p1/* p2/* > Ciphered-Souls-718-Setup.exe
           echo '78659212aad03ed323f7ad27cec813cf2178c92d0998989936047098cd04aecf  Ciphered-Souls-718-Setup.exe' | sha256sum -c -
       - name: Publish public GitHub release
@@ -28,7 +27,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release delete ciphered-souls-local-718-v0.1.0 --yes 2>/dev/null || true
+          gh release delete ciphered-souls-local-718-v0.1.0 --repo archeabelief-hash/ciphered-souls-private-server- --yes 2>/dev/null || true
           gh release create ciphered-souls-local-718-v0.1.0 Ciphered-Souls-718-Setup.exe \
+            --repo archeabelief-hash/ciphered-souls-private-server- \
             --title 'Ciphered Souls Local 718 v0.1.0' \
             --notes 'Windows installer for the local-only Ciphered Souls Matrix 718 build. Includes bundled Java runtime and cache.'
