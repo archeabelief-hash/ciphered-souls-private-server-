@@ -6,17 +6,20 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: read
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - name: Download exported installer parts
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-c4ac-81f5-9de2-a06b6a9ae088/raw?se=2026-09-14T05%3A50%3A39Z&sp=r&sv=2026-02-06&sr=b&scid=7ea37c22-2650-54b7-8309-807b13a1ce8f&skoid=2757bbe4-5137-4324-975b-acedc0bad279&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-13T23%3A17%3A25Z&ske=2026-09-14T23%3A17%3A25Z&sks=b&skv=2026-02-06&sig=uZxlTD47W7lq0mYryYppsSR0vv3YGwdHGkg/zOK35Ko%3D' -o part00.zip
-          curl -L --fail --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-0398-81f5-834c-3bb833985611/raw?se=2026-09-14T05%3A50%3A54Z&sp=r&sv=2026-02-06&sr=b&scid=5527c08a-caba-5f53-997b-9a956d201d47&skoid=2757bbe4-5137-4324-975b-acedc0bad279&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-13T23%3A21%3A22Z&ske=2026-09-14T23%3A21%3A22Z&sks=b&skv=2026-02-06&sig=KZ8wcrdLp8JXkfd/lmfsqCmm8sIB5ZLTkgcmnl1UDPE%3D' -o part01.zip
-          curl -L --fail --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-e61c-81f5-917e-a79697217b84/raw?se=2026-09-14T05%3A51%3A07Z&sp=r&sv=2026-02-06&sr=b&scid=73f570dc-d8bf-516d-b478-54cba660d6d5&skoid=2757bbe4-5137-4324-975b-acedc0bad279&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-13T11%3A40%3A55Z&ske=2026-09-14T11%3A40%3A55Z&sks=b&skv=2026-02-06&sig=a40DP0C8zKGYIS1VG2InUyeJFeI%2B5zNnlMn%2BbcZ1tLw%3D' -o part02.zip
+          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10334052222/zip' -o part00.zip
+          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10333374153/zip' -o part01.zip
+          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10333224673/zip' -o part02.zip
           unzip -q part00.zip -d p0
           unzip -q part01.zip -d p1
           unzip -q part02.zip -d p2
