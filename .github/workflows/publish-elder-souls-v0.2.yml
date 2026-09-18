@@ -1,37 +1,40 @@
-name: Publish Elder Souls Scape PK Training v0.2
+name: Build and Publish Elder Souls Scape PK Training v0.2
+
 on:
+  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/publish-elder-souls-v0.2.yml'
-  workflow_dispatch:
+      - 'tools/build-elder-souls-pk-training.ps1'
+      - 'tools/apply-elder-souls-pk-training.ps1'
+
 permissions:
   contents: write
-  actions: read
+
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
     steps:
-      - name: Download exported installer parts
-        shell: bash
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build and publish public Elder Souls Scape PK Training v0.2
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10334052222/zip' -o part00.zip
-          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10333374153/zip' -o part01.zip
-          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/archeabelief-hash/runescape-private-server-base-files/actions/artifacts/10333224673/zip' -o part02.zip
-          unzip -q part00.zip -d p0
-          unzip -q part01.zip -d p1
-          unzip -q part02.zip -d p2
-          cat p0/elder-souls-v0.2-00.part p1/elder-souls-v0.2-01.part p2/elder-souls-v0.2-02.part > Elder-Souls-Scape-PK-Training-Setup.exe
-          echo '8b2b01a97c25f16640b73ee9f2359a1a3288ecea044deb9d53cf47d18d5ff34f  Elder-Souls-Scape-PK-Training-Setup.exe' | sha256sum -c -
-      - name: Publish public release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release delete elder-souls-scape-pk-training-v0.2.0 --repo archeabelief-hash/ciphered-souls-private-server- --yes 2>/dev/null || true
-          gh release create elder-souls-scape-pk-training-v0.2.0 Elder-Souls-Scape-PK-Training-Setup.exe \
-            --repo archeabelief-hash/ciphered-souls-private-server- \
-            --title 'Elder Souls Scape PK Training v0.2.0' \
-            --notes 'Public Windows installer for the standalone Elder Souls Scape PK Training build. Includes bundled Java runtime and full cache.'
+        run: ./tools/build-elder-souls-pk-training.ps1
+
+      - name: Upload build hash
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elder-souls-scape-pk-training-public-build-report
+          path: output/SHA256.txt
+          if-no-files-found: ignore
+          retention-days: 7
