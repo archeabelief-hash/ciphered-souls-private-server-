@@ -357,7 +357,7 @@ $c477 = $c477.Replace($clientCallNeedle, $clientCallReplacement)
 
 $clientHelperNeedle = 'public Class57 method6085('
 $clientHelper = @'
-private void applyElderSoulsPrototype(int itemId, ItemDefinitions dst, boolean forceNew) {
+private void applyElderSoulsPrototype(int itemId, ItemConfig dst, boolean forceNew) {
 		int donorId;
 		String customName;
 		switch (itemId) {
