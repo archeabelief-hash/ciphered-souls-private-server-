@@ -341,80 +341,67 @@ if (-not $ci.Contains($customSwitchNeedle)) { throw 'Could not find CustomItems.
 $ci = $ci.Replace($customSwitchNeedle, $customCases)
 Set-Content $customItemsPath $ci -NoNewline
 
-# Client-side definitions: mirror the custom IDs and clone donor inventory/worn models.
-# These are temporary prototype visuals; the next asset step replaces these with our
-# original black/gold Duat meshes without changing the custom IDs or server mechanics.
-$clientClass477 = (Get-ChildItem "$clientRoot/src/main/java" -Recurse -Filter "Class477.java" | Select-Object -First 1).FullName
-if (-not $clientClass477) { throw "Could not locate Class477.java in recovered client source" }
-$c477 = Get-Content $clientClass477 -Raw
-$clientCallNeedle = 'itemdefinition.method6025(16711935);'
-$clientCallReplacement = @'
-itemdefinition.method6025(16711935);
-			applyElderSoulsPrototype(itemId, itemdefinition, forceNew);
+# Client-side definitions: use the client's existing CustomItems layer.
+# The first playable build deliberately clones compatible 718 donor geometry.
+# This proves the item/equipment/combat pipeline before original Duat meshes are packed.
+$clientCustomItems = "$clientRoot/src/main/java/CustomItems.java"
+if (-not (Test-Path $clientCustomItems)) { throw "Could not locate client CustomItems.java" }
+$cci = Get-Content $clientCustomItems -Raw
+$clientSwitchNeedle = 'switch (config.getId()) {'
+$clientCases = @'
+switch (config.getId()) {
+        case 29990:
+            copy(20671, config);
+            config.name = "Duat Khopesh";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wield", null, null, "Drop"};
+            break;
+        case 29991:
+            copy(20125, config);
+            config.name = "Duat Guardian Mask";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29992:
+            copy(20127, config);
+            config.name = "Duat Guardian Cuirass";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29993:
+            copy(20129, config);
+            config.name = "Duat Guardian Greaves";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29994:
+            copy(20131, config);
+            config.name = "Duat Guardian Grips";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29995:
+            copy(20133, config);
+            config.name = "Duat Guardian Boots";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29996:
+            copy(19372, config);
+            config.name = "Duat Guardian Mantle";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wear", null, null, "Drop"};
+            break;
+        case 29997:
+            copy(19617, config);
+            config.name = "Book of the Duat";
+            config.tradeable = true;
+            config.inventoryOptions = new String[]{null, "Wield", null, null, "Drop"};
+            break;
 '@
-if (-not $c477.Contains($clientCallNeedle)) { throw 'Could not find client item-definition post-decode hook' }
-$c477 = $c477.Replace($clientCallNeedle, $clientCallReplacement)
-
-$clientHelperNeedle = 'public Class57 method6085('
-$clientHelper = @'
-private void applyElderSoulsPrototype(int itemId, ItemConfig dst, boolean forceNew) {
-		int donorId;
-		String customName;
-		switch (itemId) {
-		case 29990: donorId = 20671; customName = "Duat Khopesh"; break;
-		case 29991: donorId = 20125; customName = "Duat Guardian Mask"; break;
-		case 29992: donorId = 20127; customName = "Duat Guardian Cuirass"; break;
-		case 29993: donorId = 20129; customName = "Duat Guardian Greaves"; break;
-		case 29994: donorId = 20131; customName = "Duat Guardian Grips"; break;
-		case 29995: donorId = 20133; customName = "Duat Guardian Boots"; break;
-		case 29996: donorId = 19372; customName = "Duat Guardian Mantle"; break;
-		case 29997: donorId = 19617; customName = "Book of the Duat"; break;
-		default: return;
-		}
-		ItemDefinitions src = getItemDefinitions(donorId, forceNew);
-		dst.anInt5700 = src.anInt5700;
-		dst.anInt5702 = src.anInt5702;
-		dst.anInt5703 = src.anInt5703;
-		dst.anInt5704 = src.anInt5704;
-		dst.aShortArray5706 = src.aShortArray5706 == null ? null : src.aShortArray5706.clone();
-		dst.aString5707 = customName;
-		dst.aByteArray5708 = src.aByteArray5708 == null ? null : src.aByteArray5708.clone();
-		dst.anInt5709 = src.anInt5709;
-		dst.anInt5710 = src.anInt5710;
-		dst.aShortArray5711 = src.aShortArray5711 == null ? null : src.aShortArray5711.clone();
-		dst.aShortArray5712 = src.aShortArray5712 == null ? null : src.aShortArray5712.clone();
-		dst.anInt5713 = src.anInt5713; dst.anInt5714 = src.anInt5714; dst.anInt5715 = src.anInt5715;
-		dst.anInt5716 = src.anInt5716; dst.anInt5717 = src.anInt5717; dst.anInt5718 = src.anInt5718;
-		dst.anInt5719 = src.anInt5719; dst.anInt5720 = src.anInt5720; dst.anInt5721 = src.anInt5721;
-		dst.anInt5722 = src.anInt5722;
-		dst.aStringArray5723 = src.aStringArray5723 == null ? null : src.aStringArray5723.clone();
-		dst.anInt5724 = src.anInt5724; dst.anInt5725 = src.anInt5725; dst.anInt5727 = src.anInt5727;
-		dst.anInt5728 = src.anInt5728; dst.anInt5729 = src.anInt5729; dst.anInt5730 = src.anInt5730;
-		dst.aBoolean5731 = false;
-		dst.aStringArray5732 = src.aStringArray5732 == null ? null : src.aStringArray5732.clone();
-		dst.anInt5733 = src.anInt5733; dst.aBoolean5734 = src.aBoolean5734; dst.anInt5735 = src.anInt5735;
-		dst.anInt5736 = src.anInt5736; dst.anInt5737 = src.anInt5737; dst.anInt5738 = src.anInt5738;
-		dst.anInt5739 = src.anInt5739; dst.anInt5741 = src.anInt5741; dst.anInt5742 = src.anInt5742;
-		dst.anInt5743 = src.anInt5743; dst.anInt5744 = src.anInt5744; dst.anInt5745 = src.anInt5745;
-		dst.anInt5746 = src.anInt5746; dst.anInt5747 = src.anInt5747; dst.anInt5748 = src.anInt5748;
-		dst.anInt5749 = src.anInt5749; dst.anInt5750 = src.anInt5750;
-		dst.anIntArray5752 = src.anIntArray5752 == null ? null : src.anIntArray5752.clone();
-		dst.anIntArray5753 = src.anIntArray5753 == null ? null : src.anIntArray5753.clone();
-		dst.aShortArray5754 = src.aShortArray5754 == null ? null : src.aShortArray5754.clone();
-		dst.anInt5755 = src.anInt5755; dst.anInt5756 = src.anInt5756; dst.anInt5758 = src.anInt5758;
-		dst.anInt5759 = src.anInt5759; dst.anInt5760 = src.anInt5760; dst.anInt5761 = src.anInt5761;
-		dst.anInt5762 = src.anInt5762; dst.anInt5763 = src.anInt5763; dst.anInt5764 = src.anInt5764;
-		dst.anInt5765 = src.anInt5765; dst.aClass437_5766 = src.aClass437_5766;
-		dst.anIntArray5767 = src.anIntArray5767 == null ? null : src.anIntArray5767.clone();
-		dst.anInt5768 = src.anInt5768; dst.anInt5769 = src.anInt5769; dst.anInt5770 = src.anInt5770;
-		dst.aBoolean5771 = src.aBoolean5771; dst.anInt5772 = src.anInt5772;
-	}
-
-	public Class57 method6085(
-'@
-if (-not $c477.Contains($clientHelperNeedle)) { throw 'Could not insert Elder Souls client item-definition helper' }
-$c477 = $c477.Replace($clientHelperNeedle, $clientHelper)
-Set-Content $clientClass477 $c477 -NoNewline
+if (-not $cci.Contains($clientSwitchNeedle)) { throw 'Could not find client CustomItems.modify switch' }
+$cci = $cci.Replace($clientSwitchNeedle, $clientCases)
+Set-Content $clientCustomItems $cci -NoNewline
 
 # One-hit engineering mode for the prototype Khopesh.
 $playerCombat = "$serverRoot/src/main/java/com/rs/game/player/actions/PlayerCombat.java"
