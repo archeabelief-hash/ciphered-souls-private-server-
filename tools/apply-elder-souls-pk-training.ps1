@@ -348,9 +348,9 @@ $clientCustomItems = "$clientRoot/src/main/java/CustomItems.java"
 if (-not (Test-Path $clientCustomItems)) { throw "Could not locate client CustomItems.java" }
 $cci = Get-Content $clientCustomItems -Raw
 
-$clientModifyNeedle = 'public static ItemConfig modify(ItemConfig config) {'
+$clientModifyNeedle = 'public static void modify(ItemConfig config) {'
 $clientModifyInjection = @'
-public static ItemConfig modify(ItemConfig config) {
+public static void modify(ItemConfig config) {
         // ELDER SOULS DUAT GUARDIAN PROTOTYPE
         // Temporary donor geometry; custom IDs and mechanics remain stable when original meshes replace these.
         switch (config.getId()) {
