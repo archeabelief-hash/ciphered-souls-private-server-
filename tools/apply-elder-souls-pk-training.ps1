@@ -344,7 +344,8 @@ Set-Content $customItemsPath $ci -NoNewline
 # Client-side definitions: mirror the custom IDs and clone donor inventory/worn models.
 # These are temporary prototype visuals; the next asset step replaces these with our
 # original black/gold Duat meshes without changing the custom IDs or server mechanics.
-$clientClass477 = "$clientRoot/src/main/java/com/jagex/Class477.java"
+$clientClass477 = (Get-ChildItem "$clientRoot/src/main/java" -Recurse -Filter "Class477.java" | Select-Object -First 1).FullName
+if (-not $clientClass477) { throw "Could not locate Class477.java in recovered client source" }
 $c477 = Get-Content $clientClass477 -Raw
 $clientCallNeedle = 'itemdefinition.method6025(16711935);'
 $clientCallReplacement = @'
