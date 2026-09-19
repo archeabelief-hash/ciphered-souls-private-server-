@@ -440,50 +440,28 @@ if (-not $pc.Contains($meleeNeedle)) { throw 'Could not patch PlayerCombat.melee
 $pc = $pc.Replace($meleeNeedle, $meleeReplacement)
 Set-Content $playerCombat $pc -NoNewline
 
-# Give every existing or new account the prototype once. A second copy is stored
-# in the bank so the test set is always recoverable.
+# Give every account the prototype automatically when it does not already own
+# a Duat Khopesh. No password or special owner account is required for this local test.
 $playerPath = "$serverRoot/src/main/java/com/rs/game/player/Player.java"
 $pl = Get-Content $playerPath -Raw
-$ctorNeedle = '	public Player(String password) {'
-$ctorReplacement = @'
-	private boolean duatPrototypeKitClaimed;
-
-	public Player(String password) {
-'@
-if (-not $pl.Contains($ctorNeedle)) { throw 'Could not add Duat kit flag to Player.java' }
-$pl = $pl.Replace($ctorNeedle, $ctorReplacement)
-
 $startPattern = '(public void start\(\) \{.*?)(\r?\n\t\trun\(\);)'
 $startReplacement = @'
 $1
-		if (!duatPrototypeKitClaimed) {
-			giveDuatPrototypeKit();
-			duatPrototypeKitClaimed = true;
+		if (!containsItem(29990)) {
+			int[] duatKit = { 29990, 29991, 29992, 29993, 29994, 29995, 29996, 29997 };
+			for (int itemId : duatKit) {
+				getInventory().addItem(new Item(itemId, 1));
+				getBank().addItem(itemId, 1, false);
+			}
+			getInventory().addItem(new Item(995, 100000000));
+			getPackets().sendGameMessage("<col=D6A84B>Duat Guardian prototype kit added. Backup copies are in your bank.</col>");
+			getPackets().sendGameMessage("<col=FF4040>TEST MODE: Duat Khopesh is level 1 and intentionally one-hit lethal.</col>");
 		}
 $2
 '@
 $plNew = [regex]::Replace($pl, $startPattern, $startReplacement, [System.Text.RegularExpressions.RegexOptions]::Singleline)
-if ($plNew -eq $pl) { throw 'Could not install Duat one-time login grant in Player.start()' }
-$pl = $plNew
-
-$kitNeedle = '	public SquealOfFortune getSquealOfFortune() {'
-$kitMethod = @'
-	private void giveDuatPrototypeKit() {
-		int[] kit = { 29990, 29991, 29992, 29993, 29994, 29995, 29996, 29997 };
-		for (int itemId : kit) {
-			getInventory().addItem(new Item(itemId, 1));
-			getBank().addItem(itemId, 1, false);
-		}
-		getInventory().addItem(new Item(995, 100000000));
-		getPackets().sendGameMessage("<col=D6A84B>Duat Guardian prototype kit added. Backup copies are in your bank.</col>");
-		getPackets().sendGameMessage("<col=FF4040>TEST MODE: Duat Khopesh is level 1 and intentionally one-hit lethal.</col>");
-	}
-
-	public SquealOfFortune getSquealOfFortune() {
-'@
-if (-not $pl.Contains($kitNeedle)) { throw 'Could not add giveDuatPrototypeKit() to Player.java' }
-$pl = $pl.Replace($kitNeedle, $kitMethod)
-Set-Content $playerPath $pl -NoNewline
+if ($plNew -eq $pl) { throw 'Could not install Duat automatic login grant in Player.start()' }
+Set-Content $playerPath $plNew -NoNewline
 
 Write-Host 'Applied Elder Souls Duat Guardian prototype: custom IDs 29990-29997, level-1 gear, lethal Khopesh, login kit.'
 
