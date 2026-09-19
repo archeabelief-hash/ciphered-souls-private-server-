@@ -347,9 +347,13 @@ Set-Content $customItemsPath $ci -NoNewline
 $clientCustomItems = "$clientRoot/src/main/java/CustomItems.java"
 if (-not (Test-Path $clientCustomItems)) { throw "Could not locate client CustomItems.java" }
 $cci = Get-Content $clientCustomItems -Raw
-$clientSwitchNeedle = 'switch (config.getId()) {'
-$clientCases = @'
-switch (config.getId()) {
+
+$clientModifyNeedle = 'public static ItemConfig modify(ItemConfig config) {'
+$clientModifyInjection = @'
+public static ItemConfig modify(ItemConfig config) {
+        // ELDER SOULS DUAT GUARDIAN PROTOTYPE
+        // Temporary donor geometry; custom IDs and mechanics remain stable when original meshes replace these.
+        switch (config.getId()) {
         case 29990:
             copy(20671, config);
             config.name = "Duat Khopesh";
@@ -398,10 +402,10 @@ switch (config.getId()) {
             config.tradeable = true;
             config.inventoryOptions = new String[]{null, "Wield", null, null, "Drop"};
             break;
+        }
 '@
-$cciNew = [regex]::Replace($cci, 'switch\s*\(\s*config\.getId\(\)\s*\)\s*\{', $clientCases, 1)
-if ($cciNew -eq $cci) { throw 'Could not find client CustomItems.modify switch' }
-$cci = $cciNew
+if (-not $cci.Contains($clientModifyNeedle)) { throw 'Could not find client CustomItems.modify method declaration' }
+$cci = $cci.Replace($clientModifyNeedle, $clientModifyInjection)
 Set-Content $clientCustomItems $cci -NoNewline
 
 # One-hit engineering mode for the prototype Khopesh.
