@@ -1,0 +1,16 @@
+name: Inspect Custom Item Hooks
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-custom-item-hooks.yml'
+      - 'tools/inspect-custom-item-hooks.ps1'
+jobs:
+  inspect:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect recovered Matrix hooks
+        shell: pwsh
+        run: ./tools/inspect-custom-item-hooks.ps1
