@@ -223,12 +223,10 @@ if (-not $spawnText.Contains($marker)) {
 # Reserve the complete 0-29999 range so our custom prototype IDs are valid.
 $utilsPath = "$serverRoot/src/main/java/com/rs/utils/Utils.java"
 $utilsText = Get-Content $utilsPath -Raw
-$utilsPattern = 'public static final int getItemDefinitionsSize\(\)\s*\{\s*int lastArchiveId = Cache\.STORE\.getIndexes\(\)\[19\]\.getLastArchiveId\(\);\s*return \(lastArchiveId \* 256 \+ Cache\.STORE\.getIndexes\(\)\[19\]\.getValidFilesCount\(lastArchiveId\)\) - 22314;\s*\}'
+$utilsPattern = 'public static final int getItemDefinitionsSize\(\)\s*\{.*?\r?\n\s*\}'
 $utilsReplacement = @'
 public static final int getItemDefinitionsSize() {
-		int lastArchiveId = Cache.STORE.getIndexes()[19].getLastArchiveId();
-		int cacheSize = (lastArchiveId * 256 + Cache.STORE.getIndexes()[19].getValidFilesCount(lastArchiveId)) - 22314;
-		return Math.max(30000, cacheSize);
+		return 30000;
 	}
 '@
 $utilsNew = [regex]::Replace($utilsText, $utilsPattern, $utilsReplacement, [System.Text.RegularExpressions.RegexOptions]::Singleline)
