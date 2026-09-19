@@ -184,7 +184,7 @@ ELDER SOULS SCAPE — PK TRAINING
 
 Launch: double-click "Elder Souls Scape PK Training.exe".
 The game and server run locally on this PC. The PK Training Arena starts in the Mage Arena bank area and reuses the existing Edgeville shop NPC lineup for training supplies.
-The Grand Exchange acts as an instant training exchange with effectively unlimited supply/demand at High Alchemy value.
+The Grand Exchange acts as an instant training exchange with effectively unlimited supply/demand at High Alchemy value.\n\nDUAT GUARDIAN PROTOTYPE\nCustom IDs 29990-29997 are level-1 test equipment. Every account receives one set in inventory and one backup set in bank. The Duat Khopesh is intentionally one-hit lethal in this engineering build.
 
 If startup fails, check logs\server.log and logs\client.log.
 '@ | Set-Content "$root/README.txt"
@@ -203,7 +203,7 @@ $iss=@'
 [Setup]
 AppId={{95B573C7-A2E0-4DD7-952D-C71871871847}
 AppName=Elder Souls Scape PK Training
-AppVersion=0.2.0
+AppVersion=0.3.0
 AppPublisher=Elder Souls Scape
 DefaultDirName={localappdata}\Programs\Elder Souls Scape PK Training
 DefaultGroupName=Elder Souls Scape PK Training
@@ -234,10 +234,10 @@ Get-FileHash output/Elder-Souls-Scape-PK-Training-Setup.exe -Algorithm SHA256 | 
 
 Write-Host '=== Publish private v0.2 release ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-scape-pk-training-v0.2.0'
+$tag='elder-souls-scape-pk-training-v0.3.0'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-Scape-PK-Training-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls Scape PK Training v0.2.0' --notes 'Local standalone PK Training Arena build. Includes the Mage Arena training hub, reused Edgeville shop NPC lineup, instant High-Alch-value training exchange, bundled Java runtime, and full cache.'
+gh release create $tag 'output/Elder-Souls-Scape-PK-Training-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls Scape PK Training v0.3.0 - Duat Prototype' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
 Write-Host 'BUILD COMPLETE: output/Elder-Souls-Scape-PK-Training-Setup.exe'

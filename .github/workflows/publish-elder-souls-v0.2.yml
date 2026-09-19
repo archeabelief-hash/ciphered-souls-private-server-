@@ -1,4 +1,4 @@
-name: Build and Publish Elder Souls Scape PK Training v0.2
+name: Build and Publish Elder Souls Scape PK Training v0.3
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build and publish public Elder Souls Scape PK Training v0.2
+      - name: Build and publish public Elder Souls Scape PK Training v0.3
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -34,7 +34,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: elder-souls-scape-pk-training-public-build-report
+          name: elder-souls-scape-pk-training-v0.3-build-report
           path: output/SHA256.txt
           if-no-files-found: ignore
           retention-days: 7
