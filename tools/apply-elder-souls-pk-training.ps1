@@ -399,8 +399,9 @@ switch (config.getId()) {
             config.inventoryOptions = new String[]{null, "Wield", null, null, "Drop"};
             break;
 '@
-if (-not $cci.Contains($clientSwitchNeedle)) { throw 'Could not find client CustomItems.modify switch' }
-$cci = $cci.Replace($clientSwitchNeedle, $clientCases)
+$cciNew = [regex]::Replace($cci, 'switch\s*\(\s*config\.getId\(\)\s*\)\s*\{', $clientCases, 1)
+if ($cciNew -eq $cci) { throw 'Could not find client CustomItems.modify switch' }
+$cci = $cciNew
 Set-Content $clientCustomItems $cci -NoNewline
 
 # One-hit engineering mode for the prototype Khopesh.
