@@ -224,7 +224,7 @@ if (-not $spawnText.Contains($marker)) {
 $customItemsPath = (Get-ChildItem "$serverRoot/src/main/java" -Recurse -Filter 'CustomItems.java' | Select-Object -First 1).FullName
 if (-not $customItemsPath) { throw 'Could not locate CustomItems.java in recovered server source' }
 $ci = Get-Content $customItemsPath -Raw
-$customSwitchNeedle = 'switch (config.getId()) {'
+$customSwitchNeedle = 'switch (1027112447 * config.itemId) {'
 $customCases = @'
 switch (config.getId()) {
 		case 29990:
