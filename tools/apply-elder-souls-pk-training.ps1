@@ -224,7 +224,7 @@ if (-not $spawnText.Contains($marker)) {
 $customItemsPath = (Get-ChildItem "$serverRoot/src/main/java" -Recurse -Filter 'CustomItems.java' | Select-Object -First 1).FullName
 if (-not $customItemsPath) { throw 'Could not locate CustomItems.java in recovered server source' }
 $ci = Get-Content $customItemsPath -Raw
-$customSwitchNeedle = 'switch (1027112447 * config.itemId) {'
+$customSwitchNeedle = 'switch (config.getId()) {'
 $customCases = @'
 switch (config.getId()) {
 		case 29990:
@@ -353,7 +353,7 @@ $clientModifyInjection = @'
 public static void modify(ItemConfig config) {
         // ELDER SOULS DUAT GUARDIAN PROTOTYPE
         // Temporary donor geometry; custom IDs and mechanics remain stable when original meshes replace these.
-        switch (config.getId()) {
+        switch (1027112447 * config.itemId) {
         case 29990:
             copy(20671, config);
             config.name = "Duat Khopesh";
