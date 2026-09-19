@@ -212,162 +212,138 @@ if (-not $spawnText.Contains($marker)) {
 # -----------------------------------------------------------------------------
 # ELDER SOULS DUAT GUARDIAN PROTOTYPE
 # First original-content vertical slice:
-# - dedicated custom item IDs 29990-29997
-# - level-1 equipment (requirements stripped)
-# - donor 718 geometry used only as temporary prototype visuals
-# - Duat Khopesh has an explicit lethal test hit
-# - every account receives one set in inventory and one backup set in bank once
+# - custom item IDs 29990-29997
+# - all pieces wearable/wieldable at level 1
+# - temporary donor geometry for the first playable visual test
+# - deliberately lethal Duat Khopesh for combat-pipeline testing
+# - one kit in inventory + one backup kit in bank for every account
 # -----------------------------------------------------------------------------
 
-# The recovered server sizes its item-definition array from cache contents.
-# Reserve the complete 0-29999 range so our custom prototype IDs are valid.
-$utilsPath = "$serverRoot/src/main/java/com/rs/utils/Utils.java"
-$utilsText = Get-Content $utilsPath -Raw
-$utilsPattern = 'public static final int getItemDefinitionsSize\(\)\s*\{.*?\r?\n\s*\}'
-$utilsReplacement = @'
-public static final int getItemDefinitionsSize() {
-		return 30000;
-	}
-'@
-$utilsNew = [regex]::Replace($utilsText, $utilsPattern, $utilsReplacement, [System.Text.RegularExpressions.RegexOptions]::Singleline)
-if ($utilsNew -eq $utilsText) { throw 'Could not reserve Elder Souls custom item ID range in Utils.java' }
-Set-Content $utilsPath $utilsNew -NoNewline
-
-# Server-side definitions: clone proven 718 donor equipment so the custom IDs are
-# genuinely wearable/equippable now, while keeping names/requirements independent.
-$serverItemDefs = "$serverRoot/src/main/java/com/rs/cache/loaders/ItemDefinitions.java"
-$sid = Get-Content $serverItemDefs -Raw
-$loaderNeedle = 'private final void loadItemDefinitions() {'
-$loaderReplacement = @'
-private final void loadItemDefinitions() {
-		if (applyElderSoulsPrototype()) {
-			loaded = true;
-			return;
-		}
-'@
-if (-not $sid.Contains($loaderNeedle)) { throw 'Could not find ItemDefinitions.loadItemDefinitions()' }
-$sid = $sid.Replace($loaderNeedle, $loaderReplacement)
-
-$helperNeedle = 'private void toNote() {'
-$serverHelper = @'
-private boolean applyElderSoulsPrototype() {
-		int donorId;
-		String customName;
-		switch (id) {
+# This Matrix branch already has a CustomItems layer specifically for cache-independent
+# custom definitions. Use it rather than forcing new records into the cache.
+$customItemsPath = (Get-ChildItem "$serverRoot/src/main/java" -Recurse -Filter 'CustomItems.java' | Select-Object -First 1).FullName
+if (-not $customItemsPath) { throw 'Could not locate CustomItems.java in recovered server source' }
+$ci = Get-Content $customItemsPath -Raw
+$customSwitchNeedle = 'switch (config.getId()) {'
+$customCases = @'
+switch (config.getId()) {
 		case 29990:
-			donorId = 20671;
-			customName = "Duat Khopesh";
+			copy(20671, config); // temporary Brackish blade geometry
+			config.name = "Duat Khopesh";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(5000);
+			config.setSlashAttack(5000);
+			config.setCrushAttack(5000);
+			config.setStabDef(100);
+			config.setSlashDef(100);
+			config.setCrushDef(100);
+			config.setMagicDef(100);
+			config.setRangeDef(100);
+			config.setStrengthBonus(5000);
+			config.setAttackSpeed(2);
+			config.setPrayerBonus(10);
 			break;
 		case 29991:
-			donorId = 20125;
-			customName = "Duat Guardian Mask";
+			copy(20125, config); // Ancient ceremonial mask geometry
+			config.name = "Duat Guardian Mask";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(25); config.setSlashAttack(25); config.setCrushAttack(25);
+			config.setMagicAttack(40); config.setRangeAttack(25);
+			config.setStabDef(200); config.setSlashDef(200); config.setCrushDef(200);
+			config.setMagicDef(225); config.setRangeDef(200);
+			config.setStrengthBonus(35); config.setRangedStrBonus(25);
+			config.setMagicDamage(10); config.setPrayerBonus(10);
 			break;
 		case 29992:
-			donorId = 20127;
-			customName = "Duat Guardian Cuirass";
+			copy(20127, config); // Ancient ceremonial top geometry
+			config.name = "Duat Guardian Cuirass";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(40); config.setSlashAttack(40); config.setCrushAttack(40);
+			config.setMagicAttack(60); config.setRangeAttack(40);
+			config.setStabDef(500); config.setSlashDef(500); config.setCrushDef(500);
+			config.setMagicDef(550); config.setRangeDef(500);
+			config.setStrengthBonus(60); config.setRangedStrBonus(35);
+			config.setMagicDamage(15); config.setPrayerBonus(15);
 			break;
 		case 29993:
-			donorId = 20129;
-			customName = "Duat Guardian Greaves";
+			copy(20129, config); // Ancient ceremonial legs geometry
+			config.name = "Duat Guardian Greaves";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(35); config.setSlashAttack(35); config.setCrushAttack(35);
+			config.setMagicAttack(50); config.setRangeAttack(35);
+			config.setStabDef(400); config.setSlashDef(400); config.setCrushDef(400);
+			config.setMagicDef(450); config.setRangeDef(400);
+			config.setStrengthBonus(50); config.setRangedStrBonus(30);
+			config.setMagicDamage(12); config.setPrayerBonus(12);
 			break;
 		case 29994:
-			donorId = 20131;
-			customName = "Duat Guardian Grips";
+			copy(20131, config); // Ancient ceremonial gloves geometry
+			config.name = "Duat Guardian Grips";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(50); config.setSlashAttack(50); config.setCrushAttack(50);
+			config.setMagicAttack(65); config.setRangeAttack(50);
+			config.setStabDef(150); config.setSlashDef(150); config.setCrushDef(150);
+			config.setMagicDef(175); config.setRangeDef(150);
+			config.setStrengthBonus(75); config.setRangedStrBonus(40);
+			config.setMagicDamage(10); config.setPrayerBonus(8);
 			break;
 		case 29995:
-			donorId = 20133;
-			customName = "Duat Guardian Boots";
+			copy(20133, config); // Ancient ceremonial boots geometry
+			config.name = "Duat Guardian Boots";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(35); config.setSlashAttack(35); config.setCrushAttack(35);
+			config.setMagicAttack(45); config.setRangeAttack(35);
+			config.setStabDef(150); config.setSlashDef(150); config.setCrushDef(150);
+			config.setMagicDef(175); config.setRangeDef(150);
+			config.setStrengthBonus(50); config.setRangedStrBonus(30);
+			config.setMagicDamage(8); config.setPrayerBonus(6);
 			break;
 		case 29996:
-			donorId = 19372;
-			customName = "Duat Guardian Mantle";
+			copy(19372, config); // Ancient cloak geometry
+			config.name = "Duat Guardian Mantle";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(100); config.setSlashAttack(100); config.setCrushAttack(100);
+			config.setMagicAttack(125); config.setRangeAttack(100);
+			config.setStabDef(250); config.setSlashDef(250); config.setCrushDef(250);
+			config.setMagicDef(300); config.setRangeDef(250);
+			config.setStrengthBonus(100); config.setRangedStrBonus(75);
+			config.setMagicDamage(20); config.setPrayerBonus(20);
 			break;
 		case 29997:
-			donorId = 19617;
-			customName = "Book of the Duat";
+			copy(19617, config); // Ancient book geometry
+			config.name = "Book of the Duat";
+			config.value = 1;
+			config.tradeable = true;
+			config.itemRequiriments = new HashMap<Integer, Integer>();
+			config.setStabAttack(25); config.setSlashAttack(25); config.setCrushAttack(25);
+			config.setMagicAttack(250); config.setRangeAttack(25);
+			config.setStabDef(100); config.setSlashDef(100); config.setCrushDef(100);
+			config.setMagicDef(300); config.setRangeDef(125);
+			config.setStrengthBonus(25); config.setRangedStrBonus(25);
+			config.setMagicDamage(35); config.setPrayerBonus(25);
 			break;
-		default:
-			return false;
-		}
-
-		ItemDefinitions donor = getItemDefinitions(donorId);
-		modelId = donor.modelId;
-		modelZoom = donor.modelZoom;
-		modelRotation1 = donor.modelRotation1;
-		modelRotation2 = donor.modelRotation2;
-		modelOffset1 = donor.modelOffset1;
-		modelOffset2 = donor.modelOffset2;
-		stackable = 0;
-		value = 1;
-		membersOnly = false;
-		maleEquip1 = donor.maleEquip1;
-		femaleEquip1 = donor.femaleEquip1;
-		maleEquip2 = donor.maleEquip2;
-		femaleEquip2 = donor.femaleEquip2;
-		maleEquipModelId3 = donor.maleEquipModelId3;
-		femaleEquipModelId3 = donor.femaleEquipModelId3;
-		groundOptions = donor.groundOptions == null ? null : donor.groundOptions.clone();
-		inventoryOptions = donor.inventoryOptions == null ? null : donor.inventoryOptions.clone();
-		originalModelColors = donor.originalModelColors == null ? null : donor.originalModelColors.clone();
-		modifiedModelColors = donor.modifiedModelColors == null ? null : donor.modifiedModelColors.clone();
-		originalTextureColors = donor.originalTextureColors == null ? null : donor.originalTextureColors.clone();
-		modifiedTextureColors = donor.modifiedTextureColors == null ? null : donor.modifiedTextureColors.clone();
-		unknownArray1 = donor.unknownArray1 == null ? null : donor.unknownArray1.clone();
-		unknownArray2 = donor.unknownArray2 == null ? null : donor.unknownArray2.clone();
-		unknownInt1 = donor.unknownInt1;
-		unknownInt2 = donor.unknownInt2;
-		unknownInt3 = donor.unknownInt3;
-		unknownInt4 = donor.unknownInt4;
-		unknownInt5 = donor.unknownInt5;
-		unknownInt6 = donor.unknownInt6;
-		unknownInt7 = donor.unknownInt7;
-		unknownInt8 = donor.unknownInt8;
-		unknownInt9 = donor.unknownInt9;
-		unknownInt10 = donor.unknownInt10;
-		unknownInt11 = donor.unknownInt11;
-		unknownInt12 = donor.unknownInt12;
-		unknownInt13 = donor.unknownInt13;
-		unknownInt14 = donor.unknownInt14;
-		unknownInt15 = donor.unknownInt15;
-		unknownInt16 = donor.unknownInt16;
-		unknownInt17 = donor.unknownInt17;
-		unknownInt18 = donor.unknownInt18;
-		unknownInt19 = donor.unknownInt19;
-		unknownInt20 = donor.unknownInt20;
-		unknownInt21 = donor.unknownInt21;
-		unknownInt22 = donor.unknownInt22;
-		unknownInt23 = donor.unknownInt23;
-		teamId = donor.teamId;
-		equipSlot = donor.equipSlot;
-		equipType = donor.equipType;
-		clientScriptData = donor.clientScriptData == null ? null : new HashMap<Integer, Object>(donor.clientScriptData);
-		if (clientScriptData != null) {
-			for (int key = 749; key <= 797; key++)
-				clientScriptData.remove(key);
-			clientScriptData.remove(277);
-		}
-		itemRequiriments = new HashMap<Integer, Integer>();
-		certId = -1;
-		certTemplateId = -1;
-		lendId = -1;
-		lendTemplateId = -1;
-		unknownValue1 = -1;
-		unknownValue2 = -1;
-		noted = false;
-		lended = false;
-		name = customName;
-		return true;
-	}
-
-	private void toNote() {
 '@
-if (-not $sid.Contains($helperNeedle)) { throw 'Could not insert Elder Souls server item-definition helper' }
-$sid = $sid.Replace($helperNeedle, $serverHelper)
-Set-Content $serverItemDefs $sid -NoNewline
+if (-not $ci.Contains($customSwitchNeedle)) { throw 'Could not find CustomItems.modify switch for Duat definitions' }
+$ci = $ci.Replace($customSwitchNeedle, $customCases)
+Set-Content $customItemsPath $ci -NoNewline
 
-# Client-side definitions: mirror the same custom IDs and clone the donor
-# inventory/worn models. This makes the prototype visible in inventory and on-body
-# without corrupting or renaming the original donor items.
+# Client-side definitions: mirror the custom IDs and clone donor inventory/worn models.
+# These are temporary prototype visuals; the next asset step replaces these with our
+# original black/gold Duat meshes without changing the custom IDs or server mechanics.
 $clientClass477 = "$clientRoot/src/main/java/com/jagex/Class477.java"
 $c477 = Get-Content $clientClass477 -Raw
 $clientCallNeedle = 'itemdefinition.method6025(16711935);'
@@ -400,68 +376,37 @@ private void applyElderSoulsPrototype(int itemId, ItemDefinitions dst, boolean f
 		dst.anInt5703 = src.anInt5703;
 		dst.anInt5704 = src.anInt5704;
 		dst.aShortArray5706 = src.aShortArray5706 == null ? null : src.aShortArray5706.clone();
+		dst.aString5707 = customName;
 		dst.aByteArray5708 = src.aByteArray5708 == null ? null : src.aByteArray5708.clone();
 		dst.anInt5709 = src.anInt5709;
 		dst.anInt5710 = src.anInt5710;
 		dst.aShortArray5711 = src.aShortArray5711 == null ? null : src.aShortArray5711.clone();
 		dst.aShortArray5712 = src.aShortArray5712 == null ? null : src.aShortArray5712.clone();
-		dst.anInt5713 = src.anInt5713;
-		dst.anInt5714 = src.anInt5714;
-		dst.anInt5715 = src.anInt5715;
-		dst.anInt5716 = src.anInt5716;
-		dst.anInt5717 = src.anInt5717;
-		dst.anInt5718 = src.anInt5718;
-		dst.anInt5719 = src.anInt5719;
-		dst.anInt5720 = src.anInt5720;
-		dst.anInt5721 = src.anInt5721;
+		dst.anInt5713 = src.anInt5713; dst.anInt5714 = src.anInt5714; dst.anInt5715 = src.anInt5715;
+		dst.anInt5716 = src.anInt5716; dst.anInt5717 = src.anInt5717; dst.anInt5718 = src.anInt5718;
+		dst.anInt5719 = src.anInt5719; dst.anInt5720 = src.anInt5720; dst.anInt5721 = src.anInt5721;
 		dst.anInt5722 = src.anInt5722;
 		dst.aStringArray5723 = src.aStringArray5723 == null ? null : src.aStringArray5723.clone();
-		dst.anInt5724 = src.anInt5724;
-		dst.anInt5725 = src.anInt5725;
-		dst.anInt5727 = src.anInt5727;
-		dst.anInt5728 = src.anInt5728;
-		dst.anInt5729 = src.anInt5729;
-		dst.anInt5730 = src.anInt5730;
+		dst.anInt5724 = src.anInt5724; dst.anInt5725 = src.anInt5725; dst.anInt5727 = src.anInt5727;
+		dst.anInt5728 = src.anInt5728; dst.anInt5729 = src.anInt5729; dst.anInt5730 = src.anInt5730;
 		dst.aBoolean5731 = false;
 		dst.aStringArray5732 = src.aStringArray5732 == null ? null : src.aStringArray5732.clone();
-		dst.anInt5733 = src.anInt5733;
-		dst.aBoolean5734 = src.aBoolean5734;
-		dst.anInt5735 = src.anInt5735;
-		dst.anInt5736 = src.anInt5736;
-		dst.anInt5737 = src.anInt5737;
-		dst.anInt5738 = src.anInt5738;
-		dst.anInt5739 = src.anInt5739;
-		dst.anInt5741 = src.anInt5741;
-		dst.anInt5742 = src.anInt5742;
-		dst.anInt5743 = src.anInt5743;
-		dst.anInt5744 = src.anInt5744;
-		dst.anInt5745 = src.anInt5745;
-		dst.anInt5746 = src.anInt5746;
-		dst.anInt5747 = src.anInt5747;
-		dst.anInt5748 = src.anInt5748;
-		dst.anInt5749 = src.anInt5749;
-		dst.anInt5750 = src.anInt5750;
+		dst.anInt5733 = src.anInt5733; dst.aBoolean5734 = src.aBoolean5734; dst.anInt5735 = src.anInt5735;
+		dst.anInt5736 = src.anInt5736; dst.anInt5737 = src.anInt5737; dst.anInt5738 = src.anInt5738;
+		dst.anInt5739 = src.anInt5739; dst.anInt5741 = src.anInt5741; dst.anInt5742 = src.anInt5742;
+		dst.anInt5743 = src.anInt5743; dst.anInt5744 = src.anInt5744; dst.anInt5745 = src.anInt5745;
+		dst.anInt5746 = src.anInt5746; dst.anInt5747 = src.anInt5747; dst.anInt5748 = src.anInt5748;
+		dst.anInt5749 = src.anInt5749; dst.anInt5750 = src.anInt5750;
 		dst.anIntArray5752 = src.anIntArray5752 == null ? null : src.anIntArray5752.clone();
 		dst.anIntArray5753 = src.anIntArray5753 == null ? null : src.anIntArray5753.clone();
 		dst.aShortArray5754 = src.aShortArray5754 == null ? null : src.aShortArray5754.clone();
-		dst.anInt5755 = src.anInt5755;
-		dst.anInt5756 = src.anInt5756;
-		dst.anInt5758 = src.anInt5758;
-		dst.anInt5759 = src.anInt5759;
-		dst.anInt5760 = src.anInt5760;
-		dst.anInt5761 = src.anInt5761;
-		dst.anInt5762 = src.anInt5762;
-		dst.anInt5763 = src.anInt5763;
-		dst.anInt5764 = src.anInt5764;
-		dst.anInt5765 = src.anInt5765;
-		dst.aClass437_5766 = src.aClass437_5766;
+		dst.anInt5755 = src.anInt5755; dst.anInt5756 = src.anInt5756; dst.anInt5758 = src.anInt5758;
+		dst.anInt5759 = src.anInt5759; dst.anInt5760 = src.anInt5760; dst.anInt5761 = src.anInt5761;
+		dst.anInt5762 = src.anInt5762; dst.anInt5763 = src.anInt5763; dst.anInt5764 = src.anInt5764;
+		dst.anInt5765 = src.anInt5765; dst.aClass437_5766 = src.aClass437_5766;
 		dst.anIntArray5767 = src.anIntArray5767 == null ? null : src.anIntArray5767.clone();
-		dst.anInt5768 = src.anInt5768;
-		dst.anInt5769 = src.anInt5769;
-		dst.anInt5770 = src.anInt5770;
-		dst.aBoolean5771 = src.aBoolean5771;
-		dst.anInt5772 = src.anInt5772;
-		dst.aString5707 = customName;
+		dst.anInt5768 = src.anInt5768; dst.anInt5769 = src.anInt5769; dst.anInt5770 = src.anInt5770;
+		dst.aBoolean5771 = src.aBoolean5771; dst.anInt5772 = src.anInt5772;
 	}
 
 	public Class57 method6085(
@@ -469,34 +414,6 @@ private void applyElderSoulsPrototype(int itemId, ItemDefinitions dst, boolean f
 if (-not $c477.Contains($clientHelperNeedle)) { throw 'Could not insert Elder Souls client item-definition helper' }
 $c477 = $c477.Replace($clientHelperNeedle, $clientHelper)
 Set-Content $clientClass477 $c477 -NoNewline
-
-# Explicit prototype bonuses. The Khopesh is intentionally absurd for this
-# engineering test; balance comes only after the complete item pipeline works.
-$itemBonuses = "$serverRoot/src/main/java/com/rs/utils/ItemBonuses.java"
-$ib = Get-Content $itemBonuses -Raw
-$bonusNeedle = @'
-	public static final int[] getItemBonuses(int itemId) {
-		return itemBonuses.get(itemId);
-	}
-'@
-$bonusReplacement = @'
-	public static final int[] getItemBonuses(int itemId) {
-		switch (itemId) {
-		case 29990: return new int[] { 5000, 5000, 5000, 0, 0, 100, 100, 100, 100, 100, 0, 0, 0, 0, 5000, 0, 0, 0 };
-		case 29991: return new int[] { 25, 25, 25, 40, 25, 200, 200, 200, 225, 200, 100, 10, 10, 10, 35, 25, 10, 10 };
-		case 29992: return new int[] { 40, 40, 40, 60, 40, 500, 500, 500, 550, 500, 200, 20, 20, 20, 60, 35, 15, 15 };
-		case 29993: return new int[] { 35, 35, 35, 50, 35, 400, 400, 400, 450, 400, 175, 15, 15, 15, 50, 30, 12, 12 };
-		case 29994: return new int[] { 50, 50, 50, 65, 50, 150, 150, 150, 175, 150, 75, 5, 5, 5, 75, 40, 8, 10 };
-		case 29995: return new int[] { 35, 35, 35, 45, 35, 150, 150, 150, 175, 150, 75, 5, 5, 5, 50, 30, 6, 8 };
-		case 29996: return new int[] { 100, 100, 100, 125, 100, 250, 250, 250, 300, 250, 125, 10, 10, 10, 100, 75, 20, 20 };
-		case 29997: return new int[] { 25, 25, 25, 250, 25, 100, 100, 100, 300, 125, 100, 10, 15, 10, 25, 25, 25, 35 };
-		default: return itemBonuses.get(itemId);
-		}
-	}
-'@
-if (-not $ib.Contains($bonusNeedle)) { throw 'Could not patch ItemBonuses.getItemBonuses()' }
-$ib = $ib.Replace($bonusNeedle, $bonusReplacement)
-Set-Content $itemBonuses $ib -NoNewline
 
 # One-hit engineering mode for the prototype Khopesh.
 $playerCombat = "$serverRoot/src/main/java/com/rs/game/player/actions/PlayerCombat.java"
@@ -523,7 +440,7 @@ $pc = $pc.Replace($meleeNeedle, $meleeReplacement)
 Set-Content $playerCombat $pc -NoNewline
 
 # Give every existing or new account the prototype once. A second copy is stored
-# in the bank so the user can recover the set even if the inventory was crowded.
+# in the bank so the test set is always recoverable.
 $playerPath = "$serverRoot/src/main/java/com/rs/game/player/Player.java"
 $pl = Get-Content $playerPath -Raw
 $ctorNeedle = '	public Player(String password) {'
