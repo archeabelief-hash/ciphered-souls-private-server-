@@ -24,3 +24,18 @@ foreach($p in @('ItemDefinitions','ItemConfig','inventoryModel','maleEquip','fem
   "--- $p ---"
   Get-ChildItem recovered/client/src/main/java -Recurse -Filter *.java | Select-String -Pattern $p | Select-Object -First 30 | ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
 }
+
+"=== ITEMCONFIG HEAD ==="
+Get-Content recovered/client/src/main/java/ItemConfig.java | Select-Object -First 260
+"=== CLASS477 HEAD ==="
+Get-Content recovered/client/src/main/java/Class477.java | Select-Object -First 220
+"=== CLIENT CUSTOMITEMS COPY/EXAMPLES ==="
+Get-Content recovered/client/src/main/java/CustomItems.java | Select-Object -First 620
+"=== SERVER CUSTOMITEMS HEAD ==="
+$sc=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter CustomItems.java | Select-Object -First 1).FullName
+if($sc){ Get-Content $sc | Select-Object -First 500 }
+"=== PLAYER START AREA ==="
+$pp='recovered/server/src/main/java/com/rs/game/player/Player.java'
+$pl=Get-Content $pp
+$match=Select-String -Path $pp -Pattern 'public void start\(\)' | Select-Object -First 1
+if($match){$s=[Math]::Max(0,$match.LineNumber-5);$pl | Select-Object -Skip $s -First 90}
