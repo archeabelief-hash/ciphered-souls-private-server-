@@ -1428,8 +1428,9 @@ export class ElderSoulsGame {
     if (this.state.tick < this.nextPlayerAttackTick) return;
 
     const totals = this.getEquipmentStats();
-    const accuracy = this.skills.bladework.level + totals.accuracy;
-    const force = this.skills.force.level + totals.power;
+    const style = this.getCombatStyleBonuses();
+    const accuracy = this.skills.bladework.level + totals.accuracy + style.accuracy;
+    const force = this.skills.force.level + totals.power + style.power;
     const targetDefense = 4 + action.combatLevel * 1.7;
     const hitChance = THREE.MathUtils.clamp(
       0.48 + (accuracy - targetDefense) * 0.025,
@@ -1455,8 +1456,17 @@ export class ElderSoulsGame {
     this.createHitsplat(damage, action.group, false);
 
     if (damage > 0) {
-      this.addXp("bladework", damage * 1.2);
-      this.addXp("force", damage * 1.1);
+      if (this.combatStyle === "edge") {
+        this.addXp("bladework", damage * 2.0);
+      } else if (this.combatStyle === "might") {
+        this.addXp("force", damage * 2.0);
+      } else if (this.combatStyle === "guard") {
+        this.addXp("ward", damage * 1.8);
+      } else {
+        this.addXp("bladework", damage * 0.8);
+        this.addXp("force", damage * 0.8);
+        this.addXp("ward", damage * 0.55);
+      }
       this.addXp("vitality", damage * 0.45);
       this.log("You strike " + action.name + " for " + damage + ".", "xp");
     } else {
@@ -1491,7 +1501,8 @@ export class ElderSoulsGame {
       if (this.state.tick < npc.nextAttackTick) continue;
 
       const totals = this.getEquipmentStats();
-      const defense = this.skills.ward.level + totals.armor + totals.ward;
+      const style = this.getCombatStyleBonuses();
+      const defense = this.skills.ward.level + totals.armor + totals.ward + style.ward;
       const npcAccuracy = 5 + npc.combatLevel * 1.6;
       const hitChance = THREE.MathUtils.clamp(
         0.47 + (npcAccuracy - defense) * 0.022,
@@ -2100,6 +2111,17 @@ export class ElderSoulsGame {
       this.combatStat("Reverence", totals.reverence) +
       this.combatStat("Vitality", totals.vitality) +
       '</div>';
+
+    const stanceNames = {
+      balanced: "Tempered",
+      edge: "Edge",
+      might: "Might",
+      guard: "Guard"
+    };
+    this.ui.combatStyles.innerHTML = Object.entries(stanceNames).map(([id, name]) =>
+      '<button class="stance-button ' + (this.combatStyle === id ? "active" : "") +
+      '" data-combat-style="' + id + '">' + name + '</button>'
+    ).join("");
 
     this.ui.skills.innerHTML = SKILLS.map((skill) => {
       const state = this.skills[skill.id];
