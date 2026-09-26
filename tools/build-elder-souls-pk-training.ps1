@@ -233,7 +233,7 @@ class UpdateForm : Form {
 }
 
 class Launcher {
-  const string CurrentVersion="0.1.3";
+  const string CurrentVersion="0.1.4";
   const string ReleasePrefix="elder-souls-rpg-alpha-v";
   const string SetupAssetName="Elder-Souls-RPG-Alpha-Setup.exe";
   const string ReleasesApi="https://api.github.com/repos/archeabelief-hash/ciphered-souls-private-server-/releases?per_page=30";
@@ -485,7 +485,7 @@ $iss=@'
 [Setup]
 AppId={{C2F21E7A-1D13-4B9A-AE71-9A7180000001}
 AppName=Elder Souls RPG Alpha
-AppVersion=0.1.3
+AppVersion=0.1.4
 AppPublisher=Elder Souls RPG
 DefaultDirName={localappdata}\Programs\Elder Souls RPG Alpha
 DefaultGroupName=Elder Souls RPG Alpha
@@ -514,12 +514,12 @@ Set-Content installer.iss $iss
 if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
 Get-FileHash output/Elder-Souls-RPG-Alpha-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
 
-Write-Host '=== Publish Elder Souls RPG Alpha 0.1.3 ==='
+Write-Host '=== Publish Elder Souls RPG Alpha 0.1.4 ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-rpg-alpha-v0.1.3'
+$tag='elder-souls-rpg-alpha-v0.1.4'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha 0.1.3' --notes 'Elder Souls RPG Alpha 0.1.3 adds persistent LocalAppData account/world saves, automatic first-run migration from the installed world data, and a one-time ::claimowner command for the permanent local master owner account. Existing GitHub auto-update, 718 client/server, custom item fixes, training hub, and local controller gateway remain included.'
+gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha 0.1.4' --notes 'Elder Souls RPG Alpha 0.1.4 adds persistent LocalAppData account/world saves, automatic first-run migration from the installed world data, and a one-time ::claimowner command for the permanent local master owner account. Existing GitHub auto-update, 718 client/server, custom item fixes, training hub, and local controller gateway remain included.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
 Write-Host 'BUILD COMPLETE: output/Elder-Souls-RPG-Alpha-Setup.exe'
