@@ -9,26 +9,62 @@ OB2=THIRD/"ob2blender"
 BLENDER_HOME=USER_HOME/"blender"
 BLENDER_RELEASE_INDEX="https://download.blender.org/release/Blender4.5/"
 
+def _blender_version(path):
+    try:
+        p=subprocess.run([str(path), "--version"], capture_output=True, text=True, timeout=25)
+        m=re.search(r"Blender\\s+(\\d+)\\.(\\d+)", (p.stdout or "") + "\n" + (p.stderr or ""))
+        if m:
+            return (int(m.group(1)), int(m.group(2)))
+    except Exception:
+        pass
+    return (0, 0)
+
+def _compatible_blender(path):
+    return Path(path).exists() and _blender_version(path) >= (4, 5)
+
 def find_blender(settings=None):
     settings=settings or {}
+    candidates=[]
+
     p=settings.get("blender_path","")
-    if p and Path(p).exists(): return Path(p)
-    portable=BLENDER_HOME/"blender.exe"
-    if portable.exists(): return portable
+    if p:
+        candidates.append(Path(p))
+
+    candidates.append(BLENDER_HOME/"blender.exe")
+
     hit=shutil.which("blender")
-    if hit: return Path(hit)
-    guesses=[
-        Path(r"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe"),
-        Path(r"C:\Program Files\Blender Foundation\Blender 4.4\blender.exe"),
-        Path(r"C:\Program Files\Blender Foundation\Blender 4.3\blender.exe"),
-    ]
+    if hit:
+        candidates.append(Path(hit))
+
     blender_root=Path(r"C:\Program Files\Blender Foundation")
     if blender_root.exists():
-        guesses = sorted(blender_root.glob("Blender */blender.exe"), reverse=True) + guesses
-    for g in guesses:
-        if g.exists(): return g
-    raise FileNotFoundError("Blender was not found. Use the Install Blender button in Item Graphics or choose blender.exe in Settings.")
+        candidates.extend(sorted(blender_root.glob("Blender */blender.exe"), reverse=True))
 
+    local=Path(os.environ.get("LOCALAPPDATA", ""))
+    if local:
+        local_root=local/"Programs"/"Blender Foundation"
+        if local_root.exists():
+            candidates.extend(sorted(local_root.glob("Blender */blender.exe"), reverse=True))
+
+    candidates.extend([
+        Path(r"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe"),
+        Path(r"C:\Program Files\Blender Foundation\Blender 4.6\blender.exe"),
+        Path(r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"),
+    ])
+
+    seen=set()
+    for candidate in candidates:
+        key=str(candidate).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if _compatible_blender(candidate):
+            return candidate
+
+    raise FileNotFoundError(
+        "Blender 4.5 or newer was not found. Use Install Blender in Content Studio; "
+        "it will install a private portable Blender automatically."
+    )
 
 def _version_tuple(value):
     try:
