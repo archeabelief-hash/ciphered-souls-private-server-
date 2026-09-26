@@ -4,7 +4,7 @@ import { EQUIPMENT_SLOTS, ITEMS, ITEM_BY_ID, cloneItem, itemStatsText } from "./
 
 const TICK_MS = 600;
 const WORLD_SIZE = 74;
-const BAG_SLOTS = 28;
+const BAG_SLOTS = 36;
 const BANK_SLOTS = 240;
 const SAVE_KEY = "elderSoulsSaveV2";
 
@@ -62,7 +62,7 @@ export class ElderSoulsGame {
     }
 
     this.log("Welcome to Elder Souls.", "good");
-    this.log("Your field bag, equipment, combat stats, bank vault, and persistent save are active.", "good");
+    this.log("Your 36-slot field bag, equipment, combat stats, bank vault, and persistent save are active.", "good");
     this.log("Click the bronze Veiled Vault near the starting ring to open your bank.");
     requestAnimationFrame(() => this.frame());
   }
