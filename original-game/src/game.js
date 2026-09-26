@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { SKILLS, createSkillState, levelForXp } from "./data/skills.js";
 import { EQUIPMENT_SLOTS, ITEMS, ITEM_BY_ID, cloneItem, itemStatsText } from "./data/items.js";
+import { GridWorld, tileDistance, worldToTile, tileToWorld } from "./engine/gridWorld.js";
 
 const TICK_MS = 600;
 const WORLD_SIZE = 74;
@@ -20,6 +21,16 @@ export class ElderSoulsGame {
     this.selected = null;
     this.pendingAction = null;
     this.playerTarget = new THREE.Vector3(0, 0, 0);
+    this.grid = new GridWorld(Math.floor(WORLD_SIZE / 2) - 2);
+    this.pathQueue = [];
+    this.currentMoveTarget = null;
+    this.runMode = false;
+    this.runEnergy = 100;
+    this.destinationTile = null;
+    this.interactionRange = 1;
+    this.attackAnim = 0;
+    this.moveCycle = 0;
+    this.hitsplats = [];
     this.inventory = Array(BAG_SLOTS).fill(null);
     this.bank = Array(BANK_SLOTS).fill(null);
     this.equipment = Object.fromEntries(EQUIPMENT_SLOTS.map((slot) => [slot, null]));
