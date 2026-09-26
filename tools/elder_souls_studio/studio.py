@@ -302,11 +302,41 @@ class Studio(tk.Tk):
         self.row(model, 4, "Face group / TSKIN", ttk.Entry(model, textvariable=self.vars["face_group"]))
         self.row(model, 5, "Integer-coordinate grid", ttk.Checkbutton(model, variable=self.vars["integer_grid"]))
 
-        data_frame = ttk.LabelFrame(right, text="Game data (JSON)", padding=10)
-        data_frame.pack(fill="both", expand=True, pady=(10,0))
+        self.editor_tabs = ttk.Notebook(right)
+        self.editor_tabs.pack(fill="both", expand=True, pady=(10,0))
+
+        data_frame = ttk.Frame(self.editor_tabs, padding=10)
+        self.graphics_tab = ttk.Frame(self.editor_tabs, padding=10)
+        self.editor_tabs.add(data_frame, text="Game Data")
+        self.editor_tabs.add(self.graphics_tab, text="Item Graphics")
+
         self.game_data = tk.Text(data_frame, height=10, wrap="none", font=("Consolas", 10))
         self.game_data.pack(fill="both", expand=True)
         self.game_data.insert("1.0", "{}")
+
+        graphics_header = ttk.Frame(self.graphics_tab)
+        graphics_header.pack(fill="x")
+        self.graphics_title = tk.StringVar(value="Open an in-game item to load its graphic.")
+        ttk.Label(graphics_header, textvariable=self.graphics_title, font=("Segoe UI", 11, "bold")).pack(side="left")
+        ttk.Button(graphics_header, text="Refresh Graphic", command=self.refresh_item_preview).pack(side="right")
+        ttk.Button(graphics_header, text="Open Model in Blender", command=self.open_preview_model_in_blender).pack(side="right", padx=(0,6))
+
+        self.graphics_info = tk.StringVar(value="")
+        ttk.Label(self.graphics_tab, textvariable=self.graphics_info, wraplength=700).pack(fill="x", pady=(6,8))
+
+        preview_holder = ttk.Frame(self.graphics_tab)
+        preview_holder.pack(fill="both", expand=True)
+        self.graphics_preview = tk.Label(
+            preview_holder,
+            text="No graphic loaded",
+            anchor="center",
+            justify="center",
+            bg="#202127",
+            fg="#d8d8d8",
+            relief="sunken",
+            bd=1,
+        )
+        self.graphics_preview.pack(fill="both", expand=True)
 
         self.status = tk.StringVar(value="Ready")
         ttk.Label(self, textvariable=self.status, relief="sunken", anchor="w").pack(fill="x", side="bottom")
