@@ -1,7 +1,7 @@
 [Setup]
 AppId={{6D9EAEB4-0B71-4FD0-9A1E-2B22DB0E5A71}
 AppName=Elder Souls Content Studio
-AppVersion=0.3.0
+AppVersion=0.3.1
 AppPublisher=Elder Souls
 DefaultDirName={localappdata}\Programs\Elder Souls Content Studio
 DefaultGroupName=Elder Souls
