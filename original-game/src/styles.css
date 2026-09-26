@@ -125,7 +125,7 @@ button, input { font: inherit; }
 }
 
 .bag-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .bank-grid {
@@ -343,16 +343,53 @@ button, input { font: inherit; }
 }
 
 .right-panel {
-  width: 330px;
+  width: 360px;
 }
 
 .log {
-  right: 354px;
+  right: 384px;
 }
 
 @media (max-width: 1100px) {
-  .right-panel { width: 280px; }
-  .log { right: 304px; }
+  .right-panel { width: 310px; }
+  .log { right: 334px; }
   .bank-layout { grid-template-columns: 1fr 210px; }
   .bank-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+
+/* v0.1.5 visual polish */
+.viewport {
+  image-rendering: auto;
+}
+
+.panel {
+  backdrop-filter: blur(4px);
+  border-color: rgba(153, 117, 66, .72);
+}
+
+.item-slot {
+  min-height: 42px;
+}
+
+.bag-grid .item-slot {
+  aspect-ratio: 1;
+}
+
+.topbar {
+  background:
+    linear-gradient(180deg, rgba(45,34,23,.96), rgba(18,15,11,.95));
+  border-color: #9a7442;
+}
+
+.brand {
+  text-shadow: 0 2px 12px rgba(227,191,119,.18);
+}
+
+.bank-window,
+.panel,
+.log {
+  box-shadow:
+    0 16px 46px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.025);
 }
