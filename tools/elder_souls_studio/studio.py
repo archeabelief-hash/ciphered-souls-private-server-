@@ -246,6 +246,7 @@ class Studio(tk.Tk):
         self.game_item_tree.column("id", width=72, anchor="e")
         self.game_item_tree.column("name", width=225)
         self.game_item_tree.pack(fill="both", expand=True, pady=4)
+        self.game_item_tree.bind("<<TreeviewSelect>>", lambda _e: self.open_game_item())
         self.game_item_tree.bind("<Double-1>", lambda _e: self.open_game_item())
         ttk.Button(game_tab, text="Open Selected Item for Editing", command=self.open_game_item).pack(fill="x", pady=(4,0))
 
@@ -719,6 +720,7 @@ class Studio(tk.Tk):
                 self._set_game_data(data)
                 self.status.set("Item attributes updated — publish to write them into the game cache")
                 win.destroy()
+                self.refresh_item_preview()
             except Exception as e:
                 messagebox.showerror("Invalid item attribute",str(e),parent=win)
 
@@ -793,6 +795,7 @@ class Studio(tk.Tk):
                 self._set_game_data(data)
                 self.status.set("Item colors updated — publish to write them into the game cache")
                 win.destroy()
+                self.refresh_item_preview()
             except Exception as e:
                 messagebox.showerror("Color editor",str(e),parent=win)
 
