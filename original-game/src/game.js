@@ -17,6 +17,7 @@ export class ElderSoulsGame {
     this.keys = new Set();
     this.resources = [];
     this.npcs = [];
+    this.groundItems = [];
     this.clickables = [];
     this.selected = null;
     this.pendingAction = null;
@@ -891,6 +892,78 @@ export class ElderSoulsGame {
     this.scene.add(group);
   }
 
+  spawnGroundItem(item, amount, x, z) {
+    const group = new THREE.Group();
+    const isCurrency = item.type === "currency";
+    const material = new THREE.MeshStandardMaterial({
+      color: isCurrency ? 0xc39a45 : (item.type === "food" ? 0x9c7658 : 0x6f7781),
+      metalness: isCurrency ? 0.65 : 0.12,
+      roughness: isCurrency ? 0.30 : 0.66,
+      emissive: isCurrency ? 0x241603 : 0x000000
+    });
+
+    const mesh = isCurrency
+      ? new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.065, 14), material)
+      : new THREE.Mesh(new THREE.OctahedronGeometry(0.20, 0), material);
+
+    if (isCurrency) mesh.rotation.x = Math.PI / 2;
+    mesh.castShadow = true;
+    group.add(mesh);
+
+    group.position.set(Math.round(x), 0.24, Math.round(z));
+    group.userData.entity = {
+      kind: "groundItem",
+      name: item.name,
+      item,
+      amount,
+      ttl: 180,
+      phase: Math.random() * Math.PI * 2,
+      group
+    };
+
+    this.groundItems.push(group.userData.entity);
+    this.clickables.push(group);
+    this.scene.add(group);
+    return group.userData.entity;
+  }
+
+  removeGroundItem(entity) {
+    const group = entity.group;
+    this.scene.remove(group);
+
+    const gi = this.groundItems.indexOf(entity);
+    if (gi >= 0) this.groundItems.splice(gi, 1);
+
+    const ci = this.clickables.indexOf(group);
+    if (ci >= 0) this.clickables.splice(ci, 1);
+
+    group.traverse((node) => {
+      if (node.geometry) node.geometry.dispose();
+      if (node.material) node.material.dispose();
+    });
+
+    if (this.selected === entity) {
+      this.selected = null;
+      this.selectionMarker.visible = false;
+    }
+  }
+
+  updateGroundItems(dt) {
+    const now = performance.now() * 0.003;
+    for (const groundItem of this.groundItems) {
+      groundItem.group.position.y = 0.24 + Math.sin(now + groundItem.phase) * 0.045;
+      groundItem.group.rotation.y += dt * 0.8;
+    }
+  }
+
+  processGroundItemLifetimes() {
+    for (let i = this.groundItems.length - 1; i >= 0; i--) {
+      const groundItem = this.groundItems[i];
+      groundItem.ttl--;
+      if (groundItem.ttl <= 0) this.removeGroundItem(groundItem);
+    }
+  }
+
   createHitsplat(amount, target, incoming = false) {
     const canvas = document.createElement("canvas");
     canvas.width = 128;
@@ -1075,7 +1148,7 @@ export class ElderSoulsGame {
   setDestinationForEntity(entity) {
     const start = this.getPlayerTile();
     const target = worldToTile(entity.group.position.x, entity.group.position.z);
-    const range = entity.kind === "bank" ? 2 : 1;
+    const range = entity.kind === "bank" ? 2 : (entity.kind === "groundItem" ? 0 : 1);
     const path = this.grid.findAdjacentPath(start, target, range);
 
     if (!path.length && tileDistance(start, target) > range) {
@@ -1189,7 +1262,7 @@ export class ElderSoulsGame {
     this.selectionMarker.visible = true;
     const start = this.getPlayerTile();
     const target = worldToTile(entity.group.position.x, entity.group.position.z);
-    const range = entity.kind === "bank" ? 2 : 1;
+    const range = entity.kind === "bank" ? 2 : (entity.kind === "groundItem" ? 0 : 1);
 
     if (tileDistance(start, target) <= range) {
       this.pathQueue = [];
@@ -1311,7 +1384,7 @@ export class ElderSoulsGame {
             const entity = this.pendingAction;
             const playerTile = this.getPlayerTile();
             const targetTile = worldToTile(entity.group.position.x, entity.group.position.z);
-            const range = entity.kind === "bank" ? 2 : 1;
+            const range = entity.kind === "bank" ? 2 : (entity.kind === "groundItem" ? 0 : 1);
             if (tileDistance(playerTile, targetTile) <= range) {
               this.beginInteraction(entity);
             }
