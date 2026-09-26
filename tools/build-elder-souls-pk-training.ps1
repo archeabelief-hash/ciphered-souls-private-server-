@@ -223,10 +223,10 @@ Write-Host '=== Build Windows installer ==='
 choco install innosetup -y --no-progress
 $iss=@'
 [Setup]
-AppId={{95B573C7-A2E0-4DD7-952D-C71871871847}
+AppId={{C2F21E7A-1D13-4B9A-AE71-9A7180000001}
 AppName=Elder Souls RPG Alpha
-AppVersion=0.4.0
-AppPublisher=Elder Souls Scape
+AppVersion=0.1.0
+AppPublisher=Elder Souls RPG
 DefaultDirName={localappdata}\Programs\Elder Souls RPG Alpha
 DefaultGroupName=Elder Souls RPG Alpha
 OutputDir=output
@@ -254,12 +254,12 @@ Set-Content installer.iss $iss
 if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
 Get-FileHash output/Elder-Souls-RPG-Alpha-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
 
-Write-Host '=== Publish public v0.4 release ==='
+Write-Host '=== Publish Elder Souls RPG Alpha 0.1.0 ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-rpg-alpha-v0.4.0'
+$tag='elder-souls-rpg-alpha-v0.1.0'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha v0.4.0 - Local Controller Gateway' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
+gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha 0.1.0' --notes 'Elder Souls RPG Alpha begins here. Self-contained local 718 client/server build with normalized Elder Souls branding and filesystem paths, bundled runtime/cache, training hub, custom prototype equipment, and local controller gateway.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
 Write-Host 'BUILD COMPLETE: output/Elder-Souls-RPG-Alpha-Setup.exe'
