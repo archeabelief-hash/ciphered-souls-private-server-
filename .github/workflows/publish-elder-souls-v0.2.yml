@@ -1,4 +1,4 @@
-name: Build and Publish Elder Souls Scape PK Training v0.3
+name: Build and Publish Elder Souls RPG Alpha
 
 on:
   workflow_dispatch:
@@ -7,6 +7,8 @@ on:
       - '.github/workflows/publish-elder-souls-v0.2.yml'
       - 'tools/build-elder-souls-pk-training.ps1'
       - 'tools/apply-elder-souls-pk-training.ps1'
+      - 'tools/apply-elder-souls-rpg-alpha-branding.ps1'
+      - 'tools/verify-elder-souls-rpg-alpha-branding.ps1'
 
 permissions:
   contents: write
@@ -24,7 +26,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build and publish public Elder Souls Scape PK Training v0.3
+      - name: Build and publish Elder Souls RPG Alpha
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -34,7 +36,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: elder-souls-scape-pk-training-v0.3-build-report
+          name: elder-souls-rpg-alpha-build-report
           path: output/SHA256.txt
           if-no-files-found: ignore
           retention-days: 7
