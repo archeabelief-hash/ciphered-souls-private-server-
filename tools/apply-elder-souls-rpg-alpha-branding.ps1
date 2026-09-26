@@ -178,6 +178,9 @@ if (Test-Path $customItems) {
     $x = Get-Content $customItems -Raw
     $x = $x.Replace('Matrix Token', 'Elder Sigil')
     $x = $x.Replace('Matrix pet', 'Elder familiar')
+    $x = $x.Replace('(short) 48547; // #4B1F6F deep purple', '(short) 49699; // #4B1F6F deep royal purple')
+    $x = $x.Replace('(short) (i == elderCapeColors.length - 1 ? 7726 : 8770); // dark/gold trim', '(short) (i == elderCapeColors.length - 1 ? 8899 : 7855); // gold / dark-gold trim')
+    $x = $x.Replace('(short) (i % 2 == 0 ? 48547 : 49683); // purple + shadow purple', '(short) (i % 2 == 0 ? 49699 : 50707); // royal purple / shadow purple')
     Write-Text $customItems $x
 }
 
