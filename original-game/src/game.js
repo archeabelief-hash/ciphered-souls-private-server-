@@ -68,7 +68,9 @@ export class ElderSoulsGame {
     this.bindEvents();
 
     if (this.loadedPosition) {
-      this.player.position.set(this.loadedPosition.x || 0, 0, this.loadedPosition.z || 0);
+      const savedTile = worldToTile(this.loadedPosition.x || 0, this.loadedPosition.z || 0);
+      const savedWorld = tileToWorld(savedTile.x, savedTile.y);
+      this.player.position.set(savedWorld.x, 0, savedWorld.z);
       this.playerTarget.copy(this.player.position);
     }
 
@@ -1849,6 +1851,14 @@ export class ElderSoulsGame {
   renderUI() {
     if (!this.ui) return;
 
+    if (this.ui.runToggle) {
+      this.ui.runToggle.textContent = this.runMode ? "Run: ON" : "Run: OFF";
+      this.ui.runToggle.classList.toggle("active", this.runMode);
+    }
+    if (this.ui.runEnergy) {
+      this.ui.runEnergy.textContent = Math.floor(this.runEnergy) + "%";
+    }
+
     const totals = this.getEquipmentStats();
     const displayedMaxHp = this.getDisplayedMaxHp();
     if (this.hp > displayedMaxHp) this.hp = displayedMaxHp;
@@ -1910,6 +1920,7 @@ export class ElderSoulsGame {
     }).join("");
 
     this.renderItemDetail();
+    this.renderMinimap();
     if (this.bankOpen) this.renderBank();
   }
 
