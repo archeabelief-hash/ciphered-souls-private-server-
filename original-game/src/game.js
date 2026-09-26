@@ -154,6 +154,7 @@ export class ElderSoulsGame {
     this.scene.add(this.player);
     this.playerTarget.copy(this.player.position);
 
+    this.spawnBankVault(-4, -4);
     this.spawnTree(-7, -2);
     this.spawnTree(-10, 5);
     this.spawnTree(8, 9);
