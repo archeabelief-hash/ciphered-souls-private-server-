@@ -29,6 +29,7 @@ export class ElderSoulsGame {
     this.destinationTile = null;
     this.interactionRange = 1;
     this.attackAnim = 0;
+    this.nextPlayerAttackTick = 0;
     this.moveCycle = 0;
     this.hitsplats = [];
     this.inventory = Array(BAG_SLOTS).fill(null);
@@ -875,6 +876,8 @@ export class ElderSoulsGame {
       alive: true,
       group,
       attackCooldown: 0,
+      attackSpeedTicks: 4,
+      nextAttackTick: 0,
       respawnTicks: 0,
       home: new THREE.Vector3(x, 0, z),
       attackAnim: 0,
