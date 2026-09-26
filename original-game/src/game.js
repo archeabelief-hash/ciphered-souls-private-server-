@@ -820,6 +820,7 @@ export class ElderSoulsGame {
       name: "Veiled Vault",
       group
     };
+    this.bankEntity = group.userData.entity;
 
     this.clickables.push(group);
     this.scene.add(group);
@@ -845,6 +846,7 @@ export class ElderSoulsGame {
     group.position.set(x, 0, z);
     this.grid.blockWorldPosition(x, z, 0);
     group.userData.entity = { kind: "shrine", name: "Veiled Shrine", group };
+    this.shrineEntity = group.userData.entity;
     this.clickables.push(group);
     this.scene.add(group);
   }
