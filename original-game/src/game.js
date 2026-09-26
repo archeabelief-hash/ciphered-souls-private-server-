@@ -257,6 +257,68 @@ export class ElderSoulsGame {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.06;
     this.scene.add(ring);
+
+    this.buildGroundDetails();
+  }
+
+  buildGroundDetails() {
+    const dummy = new THREE.Object3D();
+
+    const grass = new THREE.InstancedMesh(
+      new THREE.ConeGeometry(0.065, 0.34, 4),
+      new THREE.MeshStandardMaterial({
+        color: 0x536241,
+        roughness: 0.96,
+        metalness: 0
+      }),
+      120
+    );
+
+    for (let i = 0; i < 120; i++) {
+      const a = Math.sin(i * 91.17) * 43758.5453;
+      const b = Math.sin((i + 31) * 47.63) * 24634.6345;
+      const x = (a - Math.floor(a)) * (WORLD_SIZE - 6) - (WORLD_SIZE - 6) / 2;
+      const z = (b - Math.floor(b)) * (WORLD_SIZE - 6) - (WORLD_SIZE - 6) / 2;
+      if (Math.hypot(x, z) < 5.5) {
+        dummy.position.set(x + 7, 0.16, z + 7);
+      } else {
+        dummy.position.set(x, 0.16, z);
+      }
+      dummy.rotation.set(0, i * 0.61, (i % 5 - 2) * 0.035);
+      const scale = 0.72 + (i % 7) * 0.055;
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+      grass.setMatrixAt(i, dummy.matrix);
+    }
+    grass.castShadow = true;
+    grass.receiveShadow = true;
+    this.scene.add(grass);
+
+    const stones = new THREE.InstancedMesh(
+      new THREE.DodecahedronGeometry(0.16, 0),
+      new THREE.MeshStandardMaterial({
+        color: 0x777364,
+        roughness: 0.92,
+        metalness: 0.02
+      }),
+      46
+    );
+
+    for (let i = 0; i < 46; i++) {
+      const a = Math.sin((i + 9) * 33.91) * 15642.256;
+      const b = Math.sin((i + 71) * 67.13) * 9362.91;
+      const x = (a - Math.floor(a)) * (WORLD_SIZE - 8) - (WORLD_SIZE - 8) / 2;
+      const z = (b - Math.floor(b)) * (WORLD_SIZE - 8) - (WORLD_SIZE - 8) / 2;
+      dummy.position.set(x, 0.10, z);
+      dummy.rotation.set(i * 0.17, i * 0.38, i * 0.11);
+      const scale = 0.55 + (i % 6) * 0.08;
+      dummy.scale.set(scale * 1.2, scale * 0.60, scale);
+      dummy.updateMatrix();
+      stones.setMatrixAt(i, dummy.matrix);
+    }
+    stones.castShadow = true;
+    stones.receiveShadow = true;
+    this.scene.add(stones);
   }
 
   createHumanoid(clothColor, skinColor, trimColor) {
