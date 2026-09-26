@@ -491,3 +491,34 @@ button, input { font: inherit; }
   border: 2px solid #e1bd70;
   background: transparent;
 }
+
+
+.combat-styles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin: 7px 0 11px;
+}
+
+.stance-button {
+  padding: 6px 4px;
+  border: 1px solid #4f402d;
+  border-radius: 3px;
+  color: #cfc0a1;
+  background: #18130f;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.stance-button:hover {
+  border-color: #916f3e;
+}
+
+.stance-button.active {
+  color: #f0d28f;
+  border-color: #b18a4e;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(189,143,67,.16), transparent 65%),
+    #241b12;
+  box-shadow: inset 0 0 9px rgba(185,137,65,.10);
+}
