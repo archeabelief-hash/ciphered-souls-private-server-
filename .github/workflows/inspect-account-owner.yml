@@ -34,4 +34,4 @@ jobs:
           [ -n "$f" ] && sed -n '1,1400p' "$f" || true
           echo '=== SERIALIZATION CORE ==='
           f=$(find recovered/server/src/main/java -iname 'SerializableFilesManager.java' | head -1)
-          [ -n "$f" ] && sed -n '1,900p' "$f" || true
+          [ -n "$f" ] && sed -n '1,140p' "$f" || true
