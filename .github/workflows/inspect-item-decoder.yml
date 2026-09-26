@@ -24,8 +24,12 @@ jobs:
           git -C recovered/server reset --hard 61999df3c7a90e50b8ffb7000433d09d621c2ac7 >/dev/null
           f=$(find recovered/server/src/main/java -iname 'ItemConfig.java' -o -iname 'ItemDefinitions.java' | head -1)
           echo "FILE=$f"
-          start=$(grep -n 'readOpcodeValues' "$f" | tail -1 | cut -d: -f1)
-          from=$((start-10))
-          to=$((start+260))
-          echo "READ_OPCODE_LINES=$from-$to"
-          sed -n "${from},${to}p" "$f"
+          for sig in 'void readValues(' 'void readValues685(' 'void readValuesOSRS('; do
+            start=$(grep -n "$sig" "$f" | head -1 | cut -d: -f1)
+            if [ -n "$start" ]; then
+              from=$((start-5))
+              to=$((start+360))
+              echo "=== $sig lines $from-$to ==="
+              sed -n "${from},${to}p" "$f"
+            fi
+          done
