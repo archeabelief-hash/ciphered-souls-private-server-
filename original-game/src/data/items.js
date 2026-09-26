@@ -19,6 +19,7 @@ export const ITEMS = {
     equipSlot: "weapon",
     stackable: false,
     examine: "A forward-curved blade cast from ash-bronze.",
+    attackSpeedTicks: 4,
     stats: { accuracy: 7, power: 8 }
   },
   VEILED_HOOD: {
