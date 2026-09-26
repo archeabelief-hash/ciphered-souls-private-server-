@@ -18,9 +18,12 @@ def find_blender(settings=None):
         Path(r"C:\Program Files\Blender Foundation\Blender 4.4\blender.exe"),
         Path(r"C:\Program Files\Blender Foundation\Blender 4.3\blender.exe"),
     ]
+    blender_root=Path(r"C:\Program Files\Blender Foundation")
+    if blender_root.exists():
+        guesses = sorted(blender_root.glob("Blender */blender.exe"), reverse=True) + guesses
     for g in guesses:
         if g.exists(): return g
-    raise FileNotFoundError("Blender 4.5+ was not found.")
+    raise FileNotFoundError("Blender was not found. Use the Install Blender button in Item Graphics or choose blender.exe in Settings.")
 
 def ensure_ob2blender(settings=None):
     blender=find_blender(settings)
