@@ -1197,6 +1197,7 @@ export class ElderSoulsGame {
     this.equipment[slot] = item;
     this.inventory[index] = previous || null;
     this.selectedItem = { source: "equipment", slot, item };
+    this.refreshPlayerEquipmentVisuals();
 
     this.log("You equip the " + item.name + ".", "good");
     this.saveGame();
@@ -1216,6 +1217,7 @@ export class ElderSoulsGame {
     this.inventory[free] = item;
     this.equipment[slot] = null;
     this.selectedItem = { source: "bag", index: free, item };
+    this.refreshPlayerEquipmentVisuals();
 
     this.log("You remove the " + item.name + ".");
     this.saveGame();
@@ -1362,6 +1364,7 @@ export class ElderSoulsGame {
     }
 
     this.selectedItem = null;
+    this.refreshPlayerEquipmentVisuals();
     this.log("You deposit your equipped items.", "good");
     this.saveGame();
     this.renderUI();
