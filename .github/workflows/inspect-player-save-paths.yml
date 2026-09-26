@@ -1,0 +1,29 @@
+name: Inspect Player Save Paths
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ elder-souls-osrs-mechanics ]
+    paths:
+      - '.github/workflows/inspect-player-save-paths.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover server and inspect persistence paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/server/.git/objects/pack
+          git -C recovered/server init >/dev/null
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.pack 'https://drive.usercontent.google.com/download?id=1yao606p_04R7yXH9vsdMitsLz1t-LB79&export=download&confirm=t'
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.idx 'https://drive.usercontent.google.com/download?id=1z_1DeNJMqx70GNjvlnOqL3FQThDmqaC3&export=download&confirm=t'
+          git -C recovered/server reset --hard 61999df3c7a90e50b8ffb7000433d09d621c2ac7 >/dev/null
+          echo '=== SAVE PATH REFERENCES ==='
+          grep -RniE 'playersaves|player.?save|SerializableFilesManager|savePlayer|loadPlayer|characters|backup' recovered/server/src/main/java/com/rs | head -400 || true
+          echo '=== SERIALIZABLE FILES MANAGER ==='
+          f=$(find recovered/server/src/main/java -iname '*SerializableFilesManager*.java' | head -1)
+          if [ -n "$f" ]; then sed -n '1,280p' "$f"; fi
