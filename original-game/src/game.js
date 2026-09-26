@@ -1407,6 +1407,12 @@ export class ElderSoulsGame {
       const maxHit = Math.max(2, Math.floor(2 + force * 0.72 + attack * 0.2));
       const damage = Math.max(1, Math.floor(Math.random() * (maxHit + 1)));
       action.hp = Math.max(0, action.hp - damage);
+      this.attackAnim = 0.34;
+      this.player.rotation.y = Math.atan2(
+        action.group.position.x - this.player.position.x,
+        action.group.position.z - this.player.position.z
+      );
+      this.createHitsplat(damage, action.group, false);
       this.addXp("bladework", damage * 1.2);
       this.addXp("force", damage * 1.1);
       this.addXp("vitality", damage * 0.45);
@@ -1437,6 +1443,12 @@ export class ElderSoulsGame {
       const damage = Math.floor(Math.random() * (max + 1));
       if (damage > 0) {
         this.hp = Math.max(0, this.hp - damage);
+        npc.attackAnim = 0.34;
+        npc.group.rotation.y = Math.atan2(
+          this.player.position.x - npc.group.position.x,
+          this.player.position.z - npc.group.position.z
+        );
+        this.createHitsplat(damage, this.player, true);
         this.log(`${npc.name} hits you for ${damage}.`, "bad");
       }
       if (this.hp <= 0) {
@@ -1444,6 +1456,11 @@ export class ElderSoulsGame {
         this.hp = this.maxHp;
         this.player.position.set(0, 0, 0);
         this.playerTarget.set(0, 0, 0);
+        this.pathQueue = [];
+        this.currentMoveTarget = null;
+        this.destinationTile = null;
+        this.destinationMarker.visible = false;
+        this.selectionMarker.visible = false;
         this.pendingAction = null;
         this.selected = null;
       }
