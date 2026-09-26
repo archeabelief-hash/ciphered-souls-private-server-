@@ -1,16 +1,20 @@
 from __future__ import annotations
-import os, shutil, subprocess, sys, tempfile, urllib.request, zipfile, json
+import os, shutil, subprocess, sys, tempfile, urllib.request, zipfile, json, re
 from pathlib import Path
 
 ROOT=Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 USER_HOME=Path(os.environ.get("LOCALAPPDATA", Path.home()))/"ElderSoulsContentStudio"
 THIRD=USER_HOME/"third_party"
 OB2=THIRD/"ob2blender"
+BLENDER_HOME=USER_HOME/"blender"
+BLENDER_RELEASE_INDEX="https://download.blender.org/release/Blender4.5/"
 
 def find_blender(settings=None):
     settings=settings or {}
     p=settings.get("blender_path","")
     if p and Path(p).exists(): return Path(p)
+    portable=BLENDER_HOME/"blender.exe"
+    if portable.exists(): return portable
     hit=shutil.which("blender")
     if hit: return Path(hit)
     guesses=[
@@ -24,6 +28,121 @@ def find_blender(settings=None):
     for g in guesses:
         if g.exists(): return g
     raise FileNotFoundError("Blender was not found. Use the Install Blender button in Item Graphics or choose blender.exe in Settings.")
+
+
+def _version_tuple(value):
+    try:
+        return tuple(int(x) for x in value.split("."))
+    except Exception:
+        return (0,)
+
+def install_portable_blender(progress=None):
+    """Install Blender 4.5 LTS privately for Content Studio, without admin rights."""
+    try:
+        return find_blender({})
+    except Exception:
+        pass
+
+    USER_HOME.mkdir(parents=True, exist_ok=True)
+    downloads=USER_HOME/"downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+
+    if progress:
+        progress("Finding the newest Blender 4.5 LTS build...", 2)
+
+    req=urllib.request.Request(
+        BLENDER_RELEASE_INDEX,
+        headers={"User-Agent":"ElderSoulsContentStudio/0.3.1"}
+    )
+    with urllib.request.urlopen(req, timeout=45) as response:
+        listing=response.read().decode("utf-8", errors="ignore")
+
+    versions=sorted(
+        set(re.findall(r'blender-(4\.5\.\d+)-windows-x64\.zip', listing)),
+        key=_version_tuple
+    )
+    if not versions:
+        raise RuntimeError("Could not find a Blender 4.5 Windows x64 build on blender.org.")
+
+    version=versions[-1]
+    filename=f"blender-{version}-windows-x64.zip"
+    url=BLENDER_RELEASE_INDEX+filename
+    archive=downloads/filename
+
+    if progress:
+        progress(f"Downloading Blender {version} (~400 MB)...", 5)
+
+    def report(blocks, block_size, total):
+        if not progress or total <= 0:
+            return
+        done=min(total, blocks*block_size)
+        pct=5 + int((done/total)*72)
+        progress(f"Downloading Blender {version}... {int(done*100/total)}%", pct)
+
+    urllib.request.urlretrieve(url, archive, reporthook=report)
+
+    if progress:
+        progress("Extracting Blender...", 80)
+
+    staging=USER_HOME/"blender-staging"
+    if staging.exists():
+        shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(archive, "r") as z:
+        z.extractall(staging)
+
+    candidates=list(staging.rglob("blender.exe"))
+    if not candidates:
+        raise RuntimeError("Blender downloaded, but blender.exe was not found in the archive.")
+
+    source_dir=candidates[0].parent
+    if BLENDER_HOME.exists():
+        shutil.rmtree(BLENDER_HOME, ignore_errors=True)
+    shutil.move(str(source_dir), str(BLENDER_HOME))
+
+    shutil.rmtree(staging, ignore_errors=True)
+    try:
+        archive.unlink()
+    except OSError:
+        pass
+
+    blender=BLENDER_HOME/"blender.exe"
+    if not blender.exists():
+        raise RuntimeError("Portable Blender install did not finish correctly.")
+
+    if progress:
+        progress("Verifying Blender...", 92)
+
+    check=subprocess.run(
+        [str(blender), "--version"],
+        capture_output=True,
+        text=True,
+        timeout=60
+    )
+    if check.returncode != 0:
+        raise RuntimeError((check.stderr or check.stdout or "Blender verification failed.").strip())
+
+    if progress:
+        progress(f"Blender {version} installed.", 96)
+    return blender
+
+def install_blender_and_tools(settings=None, progress=None):
+    settings=settings or {}
+    try:
+        blender=find_blender(settings)
+        if progress:
+            progress("Blender found. Installing Elder Souls model tools...", 85)
+    except Exception:
+        blender=install_portable_blender(progress=progress)
+
+    merged=dict(settings)
+    merged["blender_path"]=str(blender)
+    dest=ensure_ob2blender(merged)
+
+    if progress:
+        progress("Blender and Elder Souls model tools are ready.", 100)
+    return blender, dest
 
 def ensure_ob2blender(settings=None):
     blender=find_blender(settings)
