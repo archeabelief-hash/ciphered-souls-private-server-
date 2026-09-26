@@ -873,8 +873,10 @@ export class ElderSoulsGame {
   bindEvents() {
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("keydown", (event) => {
-      this.keys.add(event.key.toLowerCase());
+      const key = event.key.toLowerCase();
+      this.keys.add(key);
       if (event.key === "Escape" && this.bankOpen) this.closeBank();
+      if (key === "r" && !event.repeat) this.toggleRun();
     });
     window.addEventListener("keyup", (event) => this.keys.delete(event.key.toLowerCase()));
     window.addEventListener("beforeunload", () => this.saveGame());
@@ -885,6 +887,8 @@ export class ElderSoulsGame {
     }, { passive: false });
 
     this.canvas.addEventListener("pointerdown", (event) => this.onPointer(event));
+
+    this.ui.runToggle.addEventListener("click", () => this.toggleRun());
 
     this.ui.inventory.addEventListener("click", (event) => {
       const slot = event.target.closest("[data-bag-slot]");
@@ -973,6 +977,63 @@ export class ElderSoulsGame {
     this.destinationMarker.visible = path.length > 0;
 
     return true;
+  }
+
+  toggleRun() {
+    if (this.runEnergy <= 0 && !this.runMode) {
+      this.log("You need more run energy.", "bad");
+      return;
+    }
+    this.runMode = !this.runMode;
+    this.renderUI();
+  }
+
+  renderMinimap() {
+    if (!this.ui || !this.ui.minimap || !this.player) return;
+
+    const radius = 18;
+    const playerTile = this.getPlayerTile();
+    const dots = [];
+
+    const pushDot = (tile, cls, title) => {
+      const dx = tile.x - playerTile.x;
+      const dy = tile.y - playerTile.y;
+      if (Math.abs(dx) > radius || Math.abs(dy) > radius) return;
+
+      const left = 50 + (dx / radius) * 46;
+      const top = 50 + (dy / radius) * 46;
+      dots.push(
+        '<span class="map-dot ' + cls + '" style="left:' + left.toFixed(2) +
+        '%;top:' + top.toFixed(2) + '%" title="' + this.escapeHtml(title) + '"></span>'
+      );
+    };
+
+    for (const npc of this.npcs) {
+      if (!npc.alive) continue;
+      pushDot(worldToTile(npc.group.position.x, npc.group.position.z), "npc", npc.name);
+    }
+
+    for (const resource of this.resources) {
+      if (!resource.active) continue;
+      pushDot(worldToTile(resource.group.position.x, resource.group.position.z), "resource", resource.name);
+    }
+
+    if (this.bankEntity) {
+      pushDot(worldToTile(this.bankEntity.group.position.x, this.bankEntity.group.position.z), "bank", this.bankEntity.name);
+    }
+
+    if (this.shrineEntity) {
+      pushDot(worldToTile(this.shrineEntity.group.position.x, this.shrineEntity.group.position.z), "shrine", this.shrineEntity.name);
+    }
+
+    if (this.destinationTile) {
+      pushDot(this.destinationTile, "destination", "Destination");
+    }
+
+    this.ui.minimap.innerHTML =
+      '<span class="minimap-north">N</span>' +
+      '<span class="map-dot player" style="left:50%;top:50%"></span>' +
+      dots.join("");
   }
 
   onPointer(event) {
