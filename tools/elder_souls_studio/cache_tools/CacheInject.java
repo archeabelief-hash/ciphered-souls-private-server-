@@ -241,7 +241,7 @@ public final class CacheInject {
         for(Map.Entry<Integer,Object> e:values.entrySet()){
             if(!first)b.append(',');
             first=false;
-            b.append('"').append(e.getKey()).append("":");
+            b.append('"').append(e.getKey()).append("\":");
             if(e.getValue() instanceof String)b.append('"').append(esc((String)e.getValue())).append('"');
             else b.append(String.valueOf(e.getValue()));
         }
