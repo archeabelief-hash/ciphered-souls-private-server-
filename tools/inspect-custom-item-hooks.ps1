@@ -82,3 +82,41 @@ if($am){Get-Content $am | Select-Object -First 260}
 "=== NPC HEAD ==="
 $nf=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter NPC.java | Select-Object -First 1).FullName
 if($nf){Get-Content $nf | Select-Object -First 260}
+
+"=== AGENT EXACT SECTIONS ==="
+$gl=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter GameLauncher.java | Select-Object -First 1).FullName
+if($gl) {
+  "--- GameLauncher main/init ---"
+  $gll=Get-Content $gl
+  $m=Select-String -Path $gl -Pattern 'public static void main' | Select-Object -First 1
+  if($m){$gll | Select-Object -Skip ([Math]::Max(0,$m.LineNumber-5)) -First 220}
+}
+$world=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter World.java | Select-Object -First 1).FullName
+if($world){
+  "--- World getters ---"
+  Select-String -Path $world -Pattern 'getPlayers\(|getNPCs\(' -Context 4,8 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+}
+$player=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Player.java | Select-Object -First 1).FullName
+if($player){
+  "--- Player getters ---"
+  Select-String -Path $player -Pattern 'getUsername\(|getInventory\(|getEquipment\(|getSkills\(|getHitpoints\(|getMaxHitpoints\(' -Context 2,5 | Select-Object -First 80 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+}
+$button=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter ButtonHandler.java | Select-Object -First 1).FullName
+if($button){
+  "--- sendWear ---"
+  $bl=Get-Content $button
+  $m=Select-String -Path $button -Pattern 'public static void sendWear\(Player player, int\[\] slotIds\)' | Select-Object -First 1
+  if($m){$bl | Select-Object -Skip ([Math]::Max(0,$m.LineNumber-5)) -First 170}
+}
+$bank=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Bank.java | Select-Object -First 1).FullName
+if($bank){
+  "--- Bank public API ---"
+  Select-String -Path $bank -Pattern 'public .*deposit|public .*withdraw|public .*getItem|public .*getBank|public .*openBank' -Context 1,4 | Select-Object -First 120 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+}
+$item=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Item.java | Select-Object -First 1).FullName
+if($item){ "--- Item head ---"; Get-Content $item | Select-Object -First 220 }
+$skills=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Skills.java | Select-Object -First 1).FullName
+if($skills){
+  "--- Skills API ---"
+  Select-String -Path $skills -Pattern 'public .*getLevel|public .*getXp|public static final String\[\]' -Context 1,4 | Select-Object -First 100 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+}
