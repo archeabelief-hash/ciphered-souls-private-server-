@@ -53,3 +53,22 @@ The clean-room roadmap is to grow this into the actual Elder Souls game rather t
 8. quests and dialogue
 9. original models, animation rigs, music and sound
 10. autonomous-agent API as a first-class feature
+
+
+## Windows installer and automatic updates
+
+Elder Souls now has a normal one-click Windows installer built with Electron + NSIS.
+
+Installed builds run the Elder Souls updater before opening the game. On every launch it:
+
+1. checks the public GitHub Releases feed,
+2. compares the installed semantic version,
+3. downloads a newer release automatically when one exists,
+4. installs it,
+5. restarts into the updated game.
+
+The updater is fail-open: if GitHub is unavailable, the currently installed game still starts.
+
+Release builds include Electron differential-update metadata (`latest.yml` and blockmap files), so future releases can update without requiring the player to manually download the installer again.
+
+A manual reinstall is only expected if the updater/bootstrap layer itself is broken or deliberately replaced.
