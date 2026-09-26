@@ -15,34 +15,34 @@ function Replace-RegexRequired([string]$path, [string]$pattern, [string]$replace
 # -----------------------------------------------------------------------------
 $settings = "$serverRoot/src/main/java/com/rs/Settings.java"
 $s = Get-Content $settings -Raw
-$s = $s.Replace('public static final String SERVER_NAME = "Matrix";', 'public static final String SERVER_NAME = "Elder Souls Scape PK Training";')
-$s = $s.Replace('public static final String SERVER_NAME = "Ciphered Souls";', 'public static final String SERVER_NAME = "Elder Souls Scape PK Training";')
+$s = $s.Replace('public static final String SERVER_NAME = "Matrix";', 'public static final String SERVER_NAME = "Elder Souls RPG Alpha";')
+$s = $s.Replace('public static final String SERVER_NAME = "Ciphered Souls";', 'public static final String SERVER_NAME = "Elder Souls RPG Alpha";')
 $s = [regex]::Replace($s, 'public static final WorldTile START_PLAYER_LOCATION = new WorldTile\([^;]+;', 'public static final WorldTile START_PLAYER_LOCATION = new WorldTile(2539, 4712, 0); // PK Training Arena')
-$s = $s.Replace('Matrix!', 'Elder Souls Scape PK Training!')
+$s = $s.Replace('Matrix!', 'Elder Souls RPG Alpha!')
 Set-Content $settings $s -NoNewline
 
 $loader = "$clientRoot/src/main/java/Loader.java"
 if (Test-Path $loader) {
     $x = Get-Content $loader -Raw
-    $x = $x.Replace('Matrix RSPS', 'Elder Souls Scape PK Training')
-    $x = $x.Replace('Ciphered Souls - Local 718', 'Elder Souls Scape PK Training')
-    $x = $x.Replace('Ciphered Souls — Local 718', 'Elder Souls Scape PK Training')
+    $x = $x.Replace('Matrix RSPS', 'Elder Souls RPG Alpha')
+    $x = $x.Replace('Ciphered Souls - Local 718', 'Elder Souls RPG Alpha')
+    $x = $x.Replace('Ciphered Souls — Local 718', 'Elder Souls RPG Alpha')
     Set-Content $loader $x -NoNewline
 }
 
 $clientSettings = "$clientRoot/src/main/java/Settings.java"
 if (Test-Path $clientSettings) {
     $x = Get-Content $clientSettings -Raw
-    $x = $x.Replace('CIPHERED_SOULS', 'ELDER_SOULS_SCAPE_PK_TRAINING')
-    $x = $x.Replace('MATRIX', 'ELDER_SOULS_SCAPE_PK_TRAINING')
+    $x = $x.Replace('CIPHERED_SOULS', 'ELDER_SOULS_RPG_ALPHA')
+    $x = $x.Replace('MATRIX', 'ELDER_SOULS_RPG_ALPHA')
     Set-Content $clientSettings $x -NoNewline
 }
 
 $runeLite = "$clientRoot/src/main/java/net/runelite/client/RuneLite.java"
 if (Test-Path $runeLite) {
     $x = Get-Content $runeLite -Raw
-    $x = $x.Replace('CipheredSouls718', 'ElderSoulsScapePKTraining')
-    $x = $x.Replace('MATRIX', 'ElderSoulsScapePKTraining')
+    $x = $x.Replace('CipheredSouls718', 'ElderSoulsRPGAlpha')
+    $x = $x.Replace('MATRIX', 'ElderSoulsRPGAlpha')
     Set-Content $runeLite $x -NoNewline
 }
 
@@ -74,7 +74,7 @@ public void editPrice() {
 		int price = ItemConstants.getHighAlchValue(new Item(getItemId()));
 		if (price < 1) price = 1;
 		setPricePerItem(price);
-		player.getPackets().sendGameMessage("PK Training Arena prices are fixed at High Alchemy value.");
+		player.getPackets().sendGameMessage("Alpha training exchange prices are fixed at High Alchemy value.");
 	}
 '@,
     [System.Text.RegularExpressions.RegexOptions]::Singleline
@@ -174,17 +174,17 @@ if ($newG -eq $g) { throw 'Could not replace GrandExchangeManager.confirmOffer()
 Set-Content $ge $newG -NoNewline
 
 # -----------------------------------------------------------------------------
-# PK Training Arena shop hub.
+# Elder Souls RPG Alpha training hub.
 # Reuse the already-working Edgeville shop NPC IDs and their existing handlers.
 # We only add new spawns here; no duplicate Mage Arena NPCs and no new shop code.
 # -----------------------------------------------------------------------------
 $spawns = "$serverRoot/data/npc/customSpawnsList.txt"
 if (-not (Test-Path $spawns)) { New-Item -ItemType File -Force $spawns | Out-Null }
 $spawnText = Get-Content $spawns -Raw
-$marker = '// ELDER SOULS PK TRAINING ARENA V2'
+$marker = '// ELDER SOULS RPG ALPHA TRAINING HUB V1'
 if (-not $spawnText.Contains($marker)) {
     Add-Content $spawns @'
-// ELDER SOULS PK TRAINING ARENA V2
+// ELDER SOULS RPG ALPHA TRAINING HUB V1
 // Core services
 2241 - 2542 4712 0 // Grand Exchange clerk
 494 - 2538 4711 0 // Banker
@@ -457,4 +457,4 @@ Set-Content $playerPath $plNew -NoNewline
 
 Write-Host 'Applied Elder Souls Duat Guardian prototype: custom IDs 29990-29997, level-1 gear, lethal Khopesh, login kit.'
 
-Write-Host 'Applied Elder Souls Scape PK Training patches.'
+Write-Host 'Applied Elder Souls RPG Alpha patches.'
