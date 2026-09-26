@@ -1,0 +1,40 @@
+name: Inspect 718 Equipment Pipeline
+
+on:
+  push:
+    branches:
+      - elder-souls-osrs-mechanics
+    paths:
+      - '.github/workflows/inspect-718-equipment.yml'
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover source packs and print equipment hooks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/server/.git/objects/pack recovered/client/.git/objects/pack
+          git -C recovered/server init >/dev/null
+          git -C recovered/client init >/dev/null
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.pack 'https://drive.usercontent.google.com/download?id=1yao606p_04R7yXH9vsdMitsLz1t-LB79&export=download&confirm=t'
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.idx 'https://drive.usercontent.google.com/download?id=1z_1DeNJMqx70GNjvlnOqL3FQThDmqaC3&export=download&confirm=t'
+          curl -L --fail -o recovered/client/.git/objects/pack/pack-aba9cc70f6092791ec6dbc4d5f3539166095e495.pack 'https://drive.usercontent.google.com/download?id=1mwe-bKDWPu5NQzHr3_XDI26F9wCdSZmN&export=download&confirm=t'
+          curl -L --fail -o recovered/client/.git/objects/pack/pack-aba9cc70f6092791ec6dbc4d5f3539166095e495.idx 'https://drive.usercontent.google.com/download?id=1e1-m-k3Skp43JE25_zz1TOkPPrzM5btb&export=download&confirm=t'
+          git -C recovered/server reset --hard 61999df3c7a90e50b8ffb7000433d09d621c2ac7 >/dev/null
+          git -C recovered/client reset --hard 6fcd5e3f9e2bf360b53832090558fadb5d17ab11 >/dev/null
+
+          echo '=== SERVER CUSTOM ITEMS ==='
+          sed -n '1,220p' "$(find recovered/server/src/main/java -name CustomItems.java | head -1)"
+          echo '=== ITEM CONSTANTS EQUIP SEARCH ==='
+          grep -RniE 'getItemSlot|equipSlot|EQUIPMENT_SLOT|wearItem|wear.*slot|isWear|Equipment' recovered/server/src/main/java/com/rs/game/item recovered/server/src/main/java/com/rs/game/player 2>/dev/null | head -220 || true
+          echo '=== INVENTORY HANDLER WIELD/WEAR ==='
+          grep -RniE 'Wield|Wear|wearItem|equip' recovered/server/src/main/java/com/rs/net/decoders/handlers 2>/dev/null | head -220 || true
+          echo '=== CLIENT CUSTOM ITEMS HEAD ==='
+          sed -n '1,180p' recovered/client/src/main/java/CustomItems.java
+          echo '=== CLIENT ITEM ID FIELD ==='
+          grep -RniE 'itemId.*1027112447|1027112447.*itemId|int itemId' recovered/client/src/main/java/ItemConfig.java | head -80 || true
