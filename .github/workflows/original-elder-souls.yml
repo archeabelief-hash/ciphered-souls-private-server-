@@ -1,0 +1,39 @@
+name: Build Original Elder Souls
+
+on:
+  push:
+    branches:
+      - elder-souls-original-cleanroom
+    paths:
+      - 'original-game/**'
+      - '.github/workflows/original-elder-souls.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: original-game
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: original-game/package-lock.json
+      - name: Install
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Package playable prototype
+        run: |
+          cp README.md dist/README.md
+          cd dist
+          zip -r ../../elder-souls-original-v0.1-web.zip .
+      - name: Upload playable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: elder-souls-original-v0.1-web
+          path: elder-souls-original-v0.1-web.zip
+          retention-days: 14
