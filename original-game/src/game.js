@@ -239,7 +239,12 @@ export class ElderSoulsGame {
     }
     geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
     geometry.computeVertexNormals();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      flatShading: true,
+      roughness: 0.94,
+      metalness: 0
+    });
     this.ground = new THREE.Mesh(geometry, mat);
     this.ground.receiveShadow = true;
     this.ground.userData.ground = true;
@@ -742,20 +747,67 @@ export class ElderSoulsGame {
 
   spawnTree(x, z) {
     const group = new THREE.Group();
+    const bark = new THREE.MeshStandardMaterial({
+      color: 0x5e4028,
+      roughness: 0.94,
+      metalness: 0
+    });
+    const barkDark = new THREE.MeshStandardMaterial({
+      color: 0x402c1d,
+      roughness: 0.98,
+      metalness: 0
+    });
+    const leavesA = new THREE.MeshStandardMaterial({
+      color: 0x405334,
+      roughness: 0.92,
+      metalness: 0
+    });
+    const leavesB = new THREE.MeshStandardMaterial({
+      color: 0x52613a,
+      roughness: 0.90,
+      metalness: 0
+    });
+
     const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.38, 0.55, 3.2, 7),
-      new THREE.MeshLambertMaterial({ color: 0x5a3c24, flatShading: true })
+      new THREE.CylinderGeometry(0.33, 0.55, 3.35, 10),
+      bark
     );
-    trunk.position.y = 1.6;
+    trunk.position.y = 1.67;
     trunk.castShadow = true;
+    trunk.receiveShadow = true;
     group.add(trunk);
-    const crownMat = new THREE.MeshLambertMaterial({ color: 0x42502f, flatShading: true });
-    for (let i = 0; i < 3; i++) {
-      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.35 - i * 0.13, 0), crownMat);
-      crown.position.set((i - 1) * 0.45, 3.4 + (i % 2) * 0.42, (i % 2 ? 0.35 : -0.25));
+
+    for (const [side, y, rot] of [[-1, 2.45, -0.72], [1, 2.72, 0.72]]) {
+      const branch = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.10, 0.18, 1.55, 8),
+        barkDark
+      );
+      branch.position.set(side * 0.53, y, 0);
+      branch.rotation.z = rot;
+      branch.castShadow = true;
+      group.add(branch);
+    }
+
+    const crownData = [
+      [-0.72, 3.62, 0.00, 1.24, leavesA],
+      [0.60, 3.72, -0.12, 1.30, leavesB],
+      [0.05, 4.28, 0.10, 1.36, leavesA],
+      [0.02, 3.50, 0.64, 1.05, leavesB],
+      [0.12, 3.62, -0.68, 0.98, leavesA]
+    ];
+
+    for (const [cx, cy, cz, scale, material] of crownData) {
+      const crown = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(scale, 1),
+        material
+      );
+      crown.position.set(cx, cy, cz);
+      crown.scale.y = 0.86;
       crown.castShadow = true;
+      crown.receiveShadow = true;
       group.add(crown);
     }
+
     group.position.set(x, 0, z);
     this.grid.blockWorldPosition(x, z, 0);
     group.userData.entity = {
@@ -771,6 +823,7 @@ export class ElderSoulsGame {
       active: true,
       group
     };
+
     this.resources.push(group.userData.entity);
     this.clickables.push(group);
     this.scene.add(group);
