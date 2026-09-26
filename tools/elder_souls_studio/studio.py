@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 import threading
-from blender_tools import open_model as open_in_blender, ensure_ob2blender, render_model_preview, find_blender
+from blender_tools import open_model as open_in_blender, ensure_ob2blender, render_model_preview, find_blender, install_blender_and_tools
 import tkinter as tk
 from publisher import (
     publish as publish_to_cache,
@@ -24,7 +24,7 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
 APP_NAME = "Elder Souls Content Studio"
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 USER_HOME = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ElderSoulsContentStudio"
 WORKSPACE = USER_HOME / "workspace"
@@ -557,35 +557,70 @@ class Studio(tk.Tk):
             messagebox.showerror("Open item graphic failed", str(e))
 
     def install_blender_for_preview(self):
-        try:
+        progress = tk.Toplevel(self)
+        progress.title("Install Blender for Elder Souls")
+        progress.geometry("520x165")
+        progress.resizable(False, False)
+        progress.transient(self)
+        progress.grab_set()
+
+        status_var = tk.StringVar(value="Preparing Blender installation...")
+        percent_var = tk.StringVar(value="0%")
+        ttk.Label(progress, text="Blender 4.5 LTS + Elder Souls model tools", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=16, pady=(14,4))
+        ttk.Label(progress, textvariable=status_var, wraplength=480).pack(anchor="w", padx=16, pady=(0,8))
+        bar = ttk.Progressbar(progress, orient="horizontal", mode="determinate", maximum=100, length=470)
+        bar.pack(padx=16, pady=(0,4))
+        ttk.Label(progress, textvariable=percent_var).pack(anchor="e", padx=18)
+
+        def update_progress(message, pct):
+            def apply():
+                if not progress.winfo_exists():
+                    return
+                status_var.set(message)
+                bar["value"] = max(0, min(100, int(pct)))
+                percent_var.set(f"{int(pct)}%")
+                self.status.set(message)
+            self.after(0, apply)
+
+        def save_blender_path(path):
+            settings = self.store.settings()
+            settings["blender_path"] = str(path)
+            self.store.save_settings(settings)
+
+        def worker():
             try:
-                blender = find_blender(self.store.settings())
-                messagebox.showinfo("Blender ready", f"Blender is already installed:\n{blender}")
-                return
-            except Exception:
-                pass
+                blender, addon = install_blender_and_tools(self.store.settings(), progress=update_progress)
+                save_blender_path(blender)
 
-            winget = shutil.which("winget")
-            if not winget:
-                raise FileNotFoundError(
-                    "Windows Package Manager (winget) was not found. Install Blender manually, then choose blender.exe in Settings."
-                )
+                def success():
+                    if progress.winfo_exists():
+                        progress.grab_release()
+                        progress.destroy()
+                    self.status.set("Blender and Elder Souls model tools are ready")
+                    messagebox.showinfo(
+                        "Blender ready",
+                        f"Blender is installed and configured for Content Studio.\n\n"
+                        f"Blender: {blender}\n"
+                        f"Model tools: {addon}\n\n"
+                        "You can now use Refresh Graphic or Open Model in Blender."
+                    )
+                    if self.vars["asset_type"].get() == "item":
+                        self.refresh_item_preview()
 
-            subprocess.Popen([
-                winget, "install",
-                "--id", "BlenderFoundation.Blender",
-                "-e",
-                "--accept-package-agreements",
-                "--accept-source-agreements",
-                "--silent",
-            ])
-            messagebox.showinfo(
-                "Installing Blender",
-                "Blender installation has started. When it finishes, click Refresh Graphic."
-            )
-            self.status.set("Blender installation started")
-        except Exception as e:
-            messagebox.showerror("Blender install failed", str(e))
+                self.after(0, success)
+            except Exception as exc:
+                def failed():
+                    if progress.winfo_exists():
+                        progress.grab_release()
+                        progress.destroy()
+                    self.status.set("Blender installation failed")
+                    messagebox.showerror(
+                        "Blender install failed",
+                        str(exc) + "\n\nContent Studio did not modify your game files."
+                    )
+                self.after(0, failed)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     @staticmethod
     def _hex_to_hsl16(value):
@@ -972,12 +1007,7 @@ class Studio(tk.Tk):
             messagebox.showerror("Blender launch failed", str(e))
 
     def install_blender_tools(self):
-        try:
-            dest=ensure_ob2blender(self.store.settings())
-            self.status.set("ob2blender installed")
-            messagebox.showinfo("Blender tools ready",f"ob2blender installed to:\n{dest}")
-        except Exception as e:
-            messagebox.showerror("Blender tools install failed",str(e))
+        self.install_blender_for_preview()
 
     def delete_current(self):
         sel = self.tree.selection()
