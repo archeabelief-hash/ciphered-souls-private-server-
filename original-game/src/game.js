@@ -416,6 +416,288 @@ export class ElderSoulsGame {
     return root;
   }
 
+  clearVisualGroup(group) {
+    if (!group) return;
+    while (group.children.length) {
+      const child = group.children.pop();
+      child.traverse((node) => {
+        if (node.geometry) node.geometry.dispose();
+        if (node.material) {
+          if (Array.isArray(node.material)) {
+            node.material.forEach((material) => material.dispose());
+          } else {
+            node.material.dispose();
+          }
+        }
+      });
+    }
+  }
+
+  gearMaterial(color, metalness = 0.25, roughness = 0.48) {
+    return new THREE.MeshStandardMaterial({
+      color,
+      metalness,
+      roughness
+    });
+  }
+
+  refreshPlayerEquipmentVisuals() {
+    const visuals = this.player && this.player.userData && this.player.userData.visuals;
+    if (!visuals || !visuals.attachments) return;
+
+    for (const group of Object.values(visuals.attachments)) {
+      this.clearVisualGroup(group);
+    }
+
+    for (const [slot, item] of Object.entries(this.equipment)) {
+      if (!item) continue;
+      this.addEquipmentVisual(slot, item, visuals.attachments[slot]);
+    }
+  }
+
+  addEquipmentVisual(slot, item, group) {
+    if (!group) return;
+
+    const bronze = this.gearMaterial(0xa66a32, 0.62, 0.34);
+    const darkBronze = this.gearMaterial(0x68421f, 0.58, 0.40);
+    const leather = this.gearMaterial(0x30241b, 0.06, 0.82);
+    const cloth = this.gearMaterial(0x25212d, 0.03, 0.86);
+    const dusk = this.gearMaterial(0x1a1820, 0.12, 0.64);
+    const pale = this.gearMaterial(0xb9a27c, 0.18, 0.55);
+    const violet = this.gearMaterial(0x493d69, 0.18, 0.48);
+
+    const cast = (mesh) => {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    };
+
+    if (slot === "weapon") {
+      const weapon = new THREE.Group();
+
+      const grip = cast(new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.065, 0.48, 10),
+        leather
+      ));
+      grip.position.y = 0.16;
+      weapon.add(grip);
+
+      const pommel = cast(new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 10, 8),
+        darkBronze
+      ));
+      pommel.position.y = -0.11;
+      weapon.add(pommel);
+
+      const guard = cast(new THREE.Mesh(
+        new THREE.BoxGeometry(0.34, 0.07, 0.09),
+        bronze
+      ));
+      guard.position.y = 0.43;
+      weapon.add(guard);
+
+      const blade = cast(new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 1.20, 0.055),
+        bronze
+      ));
+      blade.position.set(0, 1.02, 0);
+      blade.rotation.z = -0.07;
+      weapon.add(blade);
+
+      const curve = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.28, 0.06, 8, 16, Math.PI * 0.72),
+        bronze
+      ));
+      curve.position.set(0.16, 1.62, 0);
+      curve.rotation.z = Math.PI * 0.08;
+      weapon.add(curve);
+
+      const edge = cast(new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.86, 0.065),
+        pale
+      ));
+      edge.position.set(0.065, 1.07, 0.035);
+      edge.rotation.z = -0.07;
+      weapon.add(edge);
+
+      weapon.rotation.z = -0.12;
+      weapon.rotation.x = 0.06;
+      group.add(weapon);
+      return;
+    }
+
+    if (slot === "offhand") {
+      const shield = new THREE.Group();
+
+      const disc = cast(new THREE.Mesh(
+        new THREE.CylinderGeometry(0.43, 0.43, 0.12, 18),
+        leather
+      ));
+      disc.rotation.x = Math.PI / 2;
+      shield.add(disc);
+
+      const rim = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.43, 0.055, 8, 20),
+        bronze
+      ));
+      shield.add(rim);
+
+      const boss = cast(new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 12, 8),
+        darkBronze
+      ));
+      boss.scale.z = 0.55;
+      boss.position.z = 0.07;
+      shield.add(boss);
+
+      shield.rotation.y = -0.14;
+      group.add(shield);
+      return;
+    }
+
+    if (slot === "head") {
+      const hood = cast(new THREE.Mesh(
+        new THREE.SphereGeometry(0.50, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.78),
+        cloth
+      ));
+      hood.scale.set(0.96, 1.06, 0.95);
+      hood.position.y = 0.03;
+      group.add(hood);
+
+      const brow = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.39, 0.035, 7, 18, Math.PI),
+        violet
+      ));
+      brow.rotation.z = Math.PI;
+      brow.rotation.x = Math.PI / 2;
+      brow.position.set(0, 0.02, 0.32);
+      group.add(brow);
+      return;
+    }
+
+    if (slot === "body") {
+      const chest = cast(new THREE.Mesh(
+        new THREE.CylinderGeometry(0.57, 0.72, 1.12, 14),
+        cloth
+      ));
+      chest.position.y = 0.02;
+      group.add(chest);
+
+      const collar = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.38, 0.055, 8, 18),
+        darkBronze
+      ));
+      collar.rotation.x = Math.PI / 2;
+      collar.position.set(0, 0.52, 0.02);
+      group.add(collar);
+
+      for (const side of [-1, 1]) {
+        const plate = cast(new THREE.Mesh(
+          new THREE.SphereGeometry(0.20, 12, 8),
+          darkBronze
+        ));
+        plate.scale.set(1.25, 0.55, 0.75);
+        plate.position.set(side * 0.62, 0.43, 0);
+        group.add(plate);
+      }
+      return;
+    }
+
+    if (slot === "legs") {
+      for (const side of [-1, 1]) {
+        const leg = cast(new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.19, 0.76, 4, 10),
+          cloth
+        ));
+        leg.position.set(side * 0.28, 0.03, 0.01);
+        group.add(leg);
+
+        const knee = cast(new THREE.Mesh(
+          new THREE.SphereGeometry(0.19, 10, 8),
+          darkBronze
+        ));
+        knee.scale.set(0.95, 0.62, 0.66);
+        knee.position.set(side * 0.28, -0.20, 0.15);
+        group.add(knee);
+      }
+      return;
+    }
+
+    if (slot === "feet") {
+      for (const side of [-1, 1]) {
+        const boot = cast(new THREE.Mesh(
+          new THREE.BoxGeometry(0.38, 0.30, 0.68),
+          leather
+        ));
+        boot.position.set(side * 0.28, 0, 0.08);
+        group.add(boot);
+
+        const toe = cast(new THREE.Mesh(
+          new THREE.BoxGeometry(0.34, 0.11, 0.24),
+          darkBronze
+        ));
+        toe.position.set(side * 0.28, 0.02, 0.39);
+        group.add(toe);
+      }
+      return;
+    }
+
+    if (slot === "neck") {
+      const chain = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.16, 0.018, 7, 18),
+        bronze
+      ));
+      chain.scale.y = 1.25;
+      group.add(chain);
+
+      const charm = cast(new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.09, 0),
+        violet
+      ));
+      charm.position.y = -0.18;
+      group.add(charm);
+      return;
+    }
+
+    if (slot === "cape") {
+      const cape = cast(new THREE.Mesh(
+        new THREE.PlaneGeometry(1.15, 1.85, 4, 6),
+        new THREE.MeshStandardMaterial({
+          color: 0x302742,
+          roughness: 0.88,
+          metalness: 0,
+          side: THREE.DoubleSide
+        })
+      ));
+      cape.position.y = -0.08;
+      cape.rotation.x = -0.08;
+      group.add(cape);
+      return;
+    }
+
+    if (slot === "hands") {
+      for (const side of [-1, 1]) {
+        const glove = cast(new THREE.Mesh(
+          new THREE.SphereGeometry(0.17, 10, 8),
+          leather
+        ));
+        glove.scale.set(0.9, 1.0, 0.82);
+        glove.position.set(side * 0.76, 0, 0);
+        group.add(glove);
+      }
+      return;
+    }
+
+    if (slot === "ring") {
+      const ring = cast(new THREE.Mesh(
+        new THREE.TorusGeometry(0.07, 0.018, 6, 14),
+        bronze
+      ));
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+    }
+  }
+
   spawnTree(x, z) {
     const group = new THREE.Group();
     const trunk = new THREE.Mesh(
