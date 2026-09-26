@@ -393,3 +393,101 @@ button, input { font: inherit; }
     0 16px 46px rgba(0,0,0,.48),
     inset 0 1px 0 rgba(255,255,255,.025);
 }
+
+
+/* Tile movement HUD */
+.movement-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.run-toggle {
+  min-width: 82px;
+}
+
+.run-toggle.active {
+  border-color: #c6a257;
+  color: #f3d889;
+  box-shadow: inset 0 0 12px rgba(199,155,75,.18);
+}
+
+.minimap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 210px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid #6c5534;
+  border-radius: 50%;
+  background:
+    linear-gradient(rgba(0,0,0,.08), rgba(0,0,0,.08)),
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(190,157,96,.055) 11px 12px),
+    repeating-linear-gradient(90deg, transparent 0 11px, rgba(190,157,96,.055) 11px 12px),
+    radial-gradient(circle, #3e4931 0%, #293125 62%, #171b16 100%);
+  box-shadow:
+    inset 0 0 28px rgba(0,0,0,.68),
+    0 5px 18px rgba(0,0,0,.26);
+}
+
+.minimap::before,
+.minimap::after {
+  content: "";
+  position: absolute;
+  background: rgba(224,193,126,.12);
+}
+
+.minimap::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.minimap::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.minimap-north {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  z-index: 5;
+  transform: translateX(-50%);
+  color: #e9c36f;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.map-dot {
+  position: absolute;
+  z-index: 4;
+  width: 6px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,.72);
+}
+
+.map-dot.player {
+  width: 8px;
+  height: 8px;
+  background: #f6eee0;
+  box-shadow: 0 0 0 1px #18140e, 0 0 7px rgba(255,255,255,.35);
+}
+
+.map-dot.npc { background: #d86858; }
+.map-dot.resource { background: #d2c064; }
+.map-dot.bank { background: #67c9c1; }
+.map-dot.shrine { background: #a985de; }
+.map-dot.destination {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #e1bd70;
+  background: transparent;
+}
