@@ -1918,6 +1918,9 @@ export class ElderSoulsGame {
           coins: this.state.coins,
           tick: this.state.tick
         },
+        runEnergy: this.runEnergy,
+        runMode: this.runMode,
+        combatStyle: this.combatStyle,
         skills: this.skills,
         inventory: this.inventory.map((item) => item ? { id: item.id, amount: item.amount } : null),
         bank: this.bank.map((item) => item ? { id: item.id, amount: item.amount } : null),
@@ -1954,6 +1957,11 @@ export class ElderSoulsGame {
         coins: Number(data.state && data.state.coins || 0),
         tick: Number(data.state && data.state.tick || 0)
       };
+      this.runEnergy = Math.max(0, Math.min(100, Number(data.runEnergy == null ? 100 : data.runEnergy)));
+      this.runMode = Boolean(data.runMode) && this.runEnergy > 0;
+      this.combatStyle = ["balanced", "edge", "might", "guard"].includes(data.combatStyle)
+        ? data.combatStyle
+        : "balanced";
 
       const freshSkills = createSkillState();
       for (const skill of SKILLS) {
