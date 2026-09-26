@@ -197,8 +197,23 @@ Write-Host '=== Smoke-test actual local server ==='
 $p=Start-Process -FilePath "$root/runtime/bin/java.exe" -ArgumentList '-Xms256m','-Xmx1024m','-cp','elder-souls-scape-pk-training-server.jar;lib/*','com.rs.GameLauncher','1','false','false','false' -WorkingDirectory "$root/server" -PassThru -RedirectStandardOutput "$root/logs/smoke-server.log" -RedirectStandardError "$root/logs/smoke-server-error.log"
 $ok=$false
 for($i=0;$i -lt 120;$i++){if($p.HasExited){break};try{$tc=New-Object Net.Sockets.TcpClient;$tc.Connect('127.0.0.1',43594);$tc.Close();$ok=$true;break}catch{};Start-Sleep -Milliseconds 500}
+$gatewayOk=$false
+if($ok){
+    for($i=0;$i -lt 60;$i++){
+        if($p.HasExited){break}
+        try{
+            $tc=New-Object Net.Sockets.TcpClient
+            $tc.Connect('127.0.0.1',7780)
+            $tc.Close()
+            $gatewayOk=$true
+            break
+        }catch{}
+        Start-Sleep -Milliseconds 250
+    }
+}
 if(!$p.HasExited){Stop-Process -Id $p.Id -Force}
 if(!$ok){Get-Content "$root/logs/smoke-server.log" -Tail 100 -ErrorAction SilentlyContinue;Get-Content "$root/logs/smoke-server-error.log" -Tail 100 -ErrorAction SilentlyContinue;throw 'Server smoke test failed'}
+if(!$gatewayOk){Get-Content "$root/logs/smoke-server.log" -Tail 100 -ErrorAction SilentlyContinue;Get-Content "$root/logs/smoke-server-error.log" -Tail 100 -ErrorAction SilentlyContinue;throw 'Local controller gateway smoke test failed on port 7780'}
 Remove-Item "$root/logs/smoke-server.log","$root/logs/smoke-server-error.log" -Force -ErrorAction SilentlyContinue
 
 Write-Host '=== Build Windows installer ==='
