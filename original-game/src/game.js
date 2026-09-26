@@ -20,24 +20,51 @@ export class ElderSoulsGame {
     this.selected = null;
     this.pendingAction = null;
     this.playerTarget = new THREE.Vector3(0, 0, 0);
-    this.inventory = [
-      cloneItem(ITEMS.ASH_BRONZE_KHOPESH, 1)
-    ];
-    this.equipment = { weapon: null };
+    this.inventory = Array(BAG_SLOTS).fill(null);
+    this.bank = Array(BANK_SLOTS).fill(null);
+    this.equipment = Object.fromEntries(EQUIPMENT_SLOTS.map((slot) => [slot, null]));
     this.skills = createSkillState();
     this.maxHp = 100;
     this.hp = 100;
     this.state = { coins: 0, tick: 0 };
+    this.bankOpen = false;
+    this.selectedItem = null;
+    this.loadedPosition = null;
+
+    if (!this.loadGame()) {
+      const starter = [
+        ITEMS.ASH_BRONZE_KHOPESH,
+        ITEMS.VEILED_HOOD,
+        ITEMS.WAYFARER_COAT,
+        ITEMS.WAYFARER_TROUSERS,
+        ITEMS.DUSK_BOOTS,
+        ITEMS.SIGIL_CHARM,
+        ITEMS.REED_BUCKLER
+      ];
+      starter.forEach((item, index) => {
+        this.inventory[index] = cloneItem(item, 1);
+      });
+      this.bank[0] = cloneItem(ITEMS.RIVERFIN, 8);
+      this.bank[1] = cloneItem(ITEMS.ASHWOOD_LOG, 4);
+      this.bank[2] = cloneItem(ITEMS.DUSK_ORE, 4);
+      this.state.coins = 25;
+    }
   }
 
   start() {
     this.buildUI();
     this.buildScene();
     this.bindEvents();
-    this.log("Welcome to Elder Souls. This is a clean-room original prototype.", "good");
-    this.log("Click the ground to move. Click trees, ore, or creatures to interact.");
-    this.lastFrame = performance.now();
-    requestAnimationFrame((t) => this.frame(t));
+
+    if (this.loadedPosition) {
+      this.player.position.set(this.loadedPosition.x || 0, 0, this.loadedPosition.z || 0);
+      this.playerTarget.copy(this.player.position);
+    }
+
+    this.log("Welcome to Elder Souls.", "good");
+    this.log("Your field bag, equipment, combat stats, bank vault, and persistent save are active.", "good");
+    this.log("Click the bronze Veiled Vault near the starting ring to open your bank.");
+    requestAnimationFrame(() => this.frame());
   }
 
   buildUI() {
