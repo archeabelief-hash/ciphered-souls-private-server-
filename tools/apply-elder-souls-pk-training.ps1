@@ -408,6 +408,63 @@ if (-not $cci.Contains($clientModifyNeedle)) { throw 'Could not find client Cust
 $cci = $cci.Replace($clientModifyNeedle, $clientModifyInjection)
 Set-Content $clientCustomItems $cci -NoNewline
 
+# -----------------------------------------------------------------------------
+# Make Elder Souls custom equipment IDs truly wearable on the Matrix 718 server.
+# The custom definition layer copies stats/geometry, but the legacy server wear
+# gate can still reject IDs that are outside the original cache wearable set.
+# Explicit slot routing keeps our IDs stable as models are replaced in Content Studio.
+# -----------------------------------------------------------------------------
+$buttonHandler = "$serverRoot/src/main/java/com/rs/net/decoders/handlers/ButtonHandler.java"
+$bh = Get-Content $buttonHandler -Raw
+
+$wearMethodNeedle = 'public static boolean sendWear2(Player player, int slotId, int itemId) {'
+if (-not $bh.Contains($wearMethodNeedle)) { throw 'Could not locate ButtonHandler.sendWear2()' }
+
+$slotHelper = @'
+	private static boolean isElderSoulsEquipment(int itemId) {
+		return itemId >= 29990 && itemId <= 29997;
+	}
+
+	private static int getElderSoulsEquipmentSlot(int itemId) {
+		switch (itemId) {
+		case 29990: return Equipment.SLOT_WEAPON;
+		case 29991: return Equipment.SLOT_HAT;
+		case 29992: return Equipment.SLOT_CHEST;
+		case 29993: return Equipment.SLOT_LEGS;
+		case 29994: return Equipment.SLOT_HANDS;
+		case 29995: return Equipment.SLOT_FEET;
+		case 29996: return Equipment.SLOT_CAPE;
+		case 29997: return Equipment.SLOT_SHIELD;
+		default: return -1;
+		}
+	}
+
+'@
+
+if (-not $bh.Contains('private static boolean isElderSoulsEquipment(int itemId)')) {
+    $bh = $bh.Replace($wearMethodNeedle, $slotHelper + [Environment]::NewLine + [char]9 + $wearMethodNeedle)
+}
+
+$oldWearGate = 'if (item.getDefinitions().isNoted() || !item.getDefinitions().isWearItem(player.getAppearence().isMale()) && itemId != 4084 && itemId != 25490) {'
+$newWearGate = 'if (item.getDefinitions().isNoted() || (!item.getDefinitions().isWearItem(player.getAppearence().isMale()) && itemId != 4084 && itemId != 25490 && !isElderSoulsEquipment(itemId))) {'
+if ($bh.Contains($oldWearGate)) {
+    $bh = $bh.Replace($oldWearGate, $newWearGate)
+} elseif (-not $bh.Contains('!isElderSoulsEquipment(itemId)')) {
+    throw 'Could not patch ButtonHandler wearable gate'
+}
+
+$oldTargetSlot = 'int targetSlot = Equipment.getItemSlot(itemId);'
+$newTargetSlot = 'int targetSlot = isElderSoulsEquipment(itemId) ? getElderSoulsEquipmentSlot(itemId) : Equipment.getItemSlot(itemId);'
+$wear2Index = $bh.IndexOf($wearMethodNeedle)
+$targetIndex = $bh.IndexOf($oldTargetSlot, $wear2Index)
+if ($targetIndex -ge 0) {
+    $bh = $bh.Remove($targetIndex, $oldTargetSlot.Length).Insert($targetIndex, $newTargetSlot)
+} elseif (-not $bh.Contains($newTargetSlot)) {
+    throw 'Could not patch ButtonHandler equipment slot routing'
+}
+
+Set-Content $buttonHandler $bh -NoNewline
+
 # One-hit engineering mode for the prototype Khopesh.
 $playerCombat = "$serverRoot/src/main/java/com/rs/game/player/actions/PlayerCombat.java"
 $pc = Get-Content $playerCombat -Raw
