@@ -307,6 +307,43 @@ export class ElderSoulsGame {
     this.scene.add(mesh);
   }
 
+  spawnBankVault(x, z) {
+    const group = new THREE.Group();
+
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(2.7, 1.15, 1.9),
+      new THREE.MeshLambertMaterial({ color: 0x3a2b1d, flatShading: true })
+    );
+    base.position.y = 0.58;
+    base.castShadow = true;
+    group.add(base);
+
+    const lid = new THREE.Mesh(
+      new THREE.BoxGeometry(2.85, 0.35, 2.05),
+      new THREE.MeshLambertMaterial({ color: 0x5d4326, flatShading: true })
+    );
+    lid.position.y = 1.28;
+    lid.castShadow = true;
+    group.add(lid);
+
+    const lock = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.52, 0.18),
+      new THREE.MeshLambertMaterial({ color: 0xb38b47, emissive: 0x211200, flatShading: true })
+    );
+    lock.position.set(0, 0.93, 1.04);
+    group.add(lock);
+
+    group.position.set(x, 0, z);
+    group.userData.entity = {
+      kind: "bank",
+      name: "Veiled Vault",
+      group
+    };
+
+    this.clickables.push(group);
+    this.scene.add(group);
+  }
+
   spawnShrine(x, z) {
     const group = new THREE.Group();
     const base = new THREE.Mesh(
