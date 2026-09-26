@@ -1011,43 +1011,238 @@ export class ElderSoulsGame {
     return Math.hypot(dx, dz);
   }
 
+  saveGame() {
+    try {
+      const data = {
+        version: 2,
+        hp: this.hp,
+        maxHp: this.maxHp,
+        state: {
+          coins: this.state.coins,
+          tick: this.state.tick
+        },
+        skills: this.skills,
+        inventory: this.inventory.map((item) => item ? { id: item.id, amount: item.amount } : null),
+        bank: this.bank.map((item) => item ? { id: item.id, amount: item.amount } : null),
+        equipment: Object.fromEntries(
+          EQUIPMENT_SLOTS.map((slot) => [
+            slot,
+            this.equipment[slot] ? { id: this.equipment[slot].id, amount: this.equipment[slot].amount } : null
+          ])
+        ),
+        position: this.player
+          ? { x: this.player.position.x, z: this.player.position.z }
+          : (this.loadedPosition || { x: 0, z: 0 })
+      };
+
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error("Save failed", error);
+      return false;
+    }
+  }
+
+  loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+
+      const data = JSON.parse(raw);
+      if (!data || data.version !== 2) return false;
+
+      this.hp = Number(data.hp || 100);
+      this.maxHp = Number(data.maxHp || 100);
+      this.state = {
+        coins: Number(data.state && data.state.coins || 0),
+        tick: Number(data.state && data.state.tick || 0)
+      };
+
+      const freshSkills = createSkillState();
+      for (const skill of SKILLS) {
+        const saved = data.skills && data.skills[skill.id];
+        if (!saved) continue;
+        freshSkills[skill.id] = {
+          xp: Number(saved.xp || 0),
+          level: Number(saved.level || 1)
+        };
+      }
+      this.skills = freshSkills;
+
+      this.inventory = Array(BAG_SLOTS).fill(null).map((_, index) =>
+        this.hydrateItem(data.inventory && data.inventory[index])
+      );
+
+      this.bank = Array(BANK_SLOTS).fill(null).map((_, index) =>
+        this.hydrateItem(data.bank && data.bank[index])
+      );
+
+      this.equipment = Object.fromEntries(
+        EQUIPMENT_SLOTS.map((slot) => [
+          slot,
+          this.hydrateItem(data.equipment && data.equipment[slot])
+        ])
+      );
+
+      this.loadedPosition = data.position || { x: 0, z: 0 };
+      return true;
+    } catch (error) {
+      console.error("Load failed", error);
+      return false;
+    }
+  }
+
+  hydrateItem(saved) {
+    if (!saved) return null;
+    const template = ITEM_BY_ID[Number(saved.id)];
+    if (!template) return null;
+    return cloneItem(template, Math.max(1, Number(saved.amount || 1)));
+  }
+
+  escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  itemGlyph(item) {
+    const words = item.name.split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+  }
+
+  combatStat(label, value) {
+    const number = Number(value || 0);
+    return '<div class="combat-stat"><span>' + this.escapeHtml(label) + '</span><b>' +
+      (number >= 0 ? "+" : "") + number + '</b></div>';
+  }
+
+  renderSlotGrid(items, dataName) {
+    return items.map((item, index) => {
+      const title = item
+        ? item.name + (itemStatsText(item) ? " · " + itemStatsText(item) : "")
+        : "Empty slot";
+
+      let body = "";
+      if (item) {
+        body += '<span class="item-glyph">' + this.escapeHtml(this.itemGlyph(item)) + '</span>';
+        if (item.amount > 1) {
+          body += '<span class="item-amount">' + item.amount + '</span>';
+        }
+      }
+
+      return '<button class="item-slot ' + (item ? "filled" : "") +
+        '" data-' + dataName + '="' + index +
+        '" title="' + this.escapeHtml(title) + '">' + body + '</button>';
+    }).join("");
+  }
+
+  renderItemDetail() {
+    if (!this.ui || !this.ui.itemDetail) return;
+
+    const selected = this.selectedItem;
+    if (!selected || !selected.item) {
+      this.ui.itemDetail.innerHTML = "Select an item to inspect it.";
+      return;
+    }
+
+    const item = selected.item;
+    const stats = itemStatsText(item);
+    const actions = [];
+
+    if (selected.source === "bag" && item.equipSlot) {
+      actions.push('<button class="es-button" data-item-action="equip">Equip</button>');
+    }
+    if (selected.source === "bag" && item.type === "food") {
+      actions.push('<button class="es-button" data-item-action="consume">Consume</button>');
+    }
+    if (selected.source === "equipment") {
+      actions.push('<button class="es-button" data-item-action="unequip">Remove</button>');
+    }
+    actions.push('<button class="es-button" data-item-action="examine">Examine</button>');
+
+    this.ui.itemDetail.innerHTML =
+      '<div class="item-name">' + this.escapeHtml(item.name) + '</div>' +
+      '<div>' + this.escapeHtml(item.examine || "") + '</div>' +
+      (item.equipSlot ? '<div class="item-line"><b>Slot:</b> ' + this.escapeHtml(item.equipSlot) + '</div>' : "") +
+      (stats ? '<div class="item-stats">' + this.escapeHtml(stats) + '</div>' : "") +
+      '<div class="item-actions">' + actions.join("") + '</div>';
+  }
+
+  renderBank() {
+    if (!this.ui || !this.bankOpen) return;
+    this.ui.bankGrid.innerHTML = this.renderSlotGrid(this.bank, "bank-slot");
+    this.ui.bankBagGrid.innerHTML = this.renderSlotGrid(this.inventory, "bank-bag-slot");
+  }
+
   renderUI() {
     if (!this.ui) return;
 
-    const hpPct = Math.max(0, Math.min(100, (this.hp / this.maxHp) * 100));
-    this.ui.character.innerHTML = `
-      <div class="stat-row"><b>Vitality</b> ${this.hp}/${this.maxHp}
-        <div class="hpbar"><div style="width:${hpPct}%"></div></div>
-      </div>
-      <div class="stat-row"><b>Dusk marks</b> ${this.state.coins}</div>
-      <div class="stat-row"><b>Position</b> ${this.player ? this.player.position.x.toFixed(1) : "0.0"}, ${this.player ? this.player.position.z.toFixed(1) : "0.0"}</div>
-    `;
+    const totals = this.getEquipmentStats();
+    const displayedMaxHp = this.getDisplayedMaxHp();
+    if (this.hp > displayedMaxHp) this.hp = displayedMaxHp;
+    const hpPct = Math.max(0, Math.min(100, (this.hp / displayedMaxHp) * 100));
 
-    this.ui.skills.innerHTML = SKILLS.map((s) => {
-      const state = this.skills[s.id];
-      return `<div class="skill-row"><span>${s.name}<div class="small">${Math.floor(state.xp)} xp</div></span><b>${state.level}</b></div>`;
+    this.ui.character.innerHTML =
+      '<div class="stat-row"><b>Vitality</b> ' + this.hp + '/' + displayedMaxHp +
+      '<div class="hpbar"><div style="width:' + hpPct + '%"></div></div></div>' +
+      '<div class="stat-row"><b>Combat rating</b> ' + this.getCombatRating() + '</div>' +
+      '<div class="stat-row"><b>Dusk marks</b> ' + this.state.coins + '</div>' +
+      '<div class="stat-row"><b>Position</b> ' +
+      (this.player ? this.player.position.x.toFixed(1) : "0.0") + ', ' +
+      (this.player ? this.player.position.z.toFixed(1) : "0.0") + '</div>';
+
+    this.ui.combatStats.innerHTML =
+      '<div class="combat-stat-grid">' +
+      this.combatStat("Accuracy", totals.accuracy) +
+      this.combatStat("Power", totals.power) +
+      this.combatStat("Armor", totals.armor) +
+      this.combatStat("Ward", totals.ward) +
+      this.combatStat("Heka", totals.heka) +
+      this.combatStat("Marksman", totals.marksmanship) +
+      this.combatStat("Reverence", totals.reverence) +
+      this.combatStat("Vitality", totals.vitality) +
+      '</div>';
+
+    this.ui.skills.innerHTML = SKILLS.map((skill) => {
+      const state = this.skills[skill.id];
+      return '<div class="skill-row"><span>' + this.escapeHtml(skill.name) +
+        '<div class="small">' + Math.floor(state.xp) + ' xp</div></span><b>' +
+        state.level + '</b></div>';
     }).join("");
 
     if (!this.selected) {
       this.ui.target.innerHTML = '<div class="target-card small">Nothing selected.</div>';
     } else if (this.selected.kind === "npc") {
-      this.ui.target.innerHTML = `
-        <div class="target-card"><b>${this.selected.name}</b>
-          <div>Combat ${this.selected.combatLevel}</div>
-          <div>HP ${this.selected.hp}/${this.selected.maxHp}</div>
-        </div>
-      `;
+      this.ui.target.innerHTML =
+        '<div class="target-card"><b>' + this.escapeHtml(this.selected.name) + '</b>' +
+        '<div>Combat ' + this.selected.combatLevel + '</div>' +
+        '<div>HP ' + this.selected.hp + '/' + this.selected.maxHp + '</div></div>';
     } else {
-      this.ui.target.innerHTML = `<div class="target-card"><b>${this.selected.name}</b><div class="small">${this.selected.kind}</div></div>`;
+      this.ui.target.innerHTML =
+        '<div class="target-card"><b>' + this.escapeHtml(this.selected.name) + '</b>' +
+        '<div class="small">' + this.escapeHtml(this.selected.kind) + '</div></div>';
     }
 
-    this.ui.inventory.innerHTML = this.inventory.length
-      ? this.inventory.map((item, index) => `<div class="inventory-row" data-inventory-index="${index}"><b>${item.name}</b> × ${item.amount}<div class="small">${item.type === "weapon" ? "click to wield" : item.type}</div></div>`).join("")
-      : '<div class="small">Empty.</div>';
+    const used = this.inventory.filter(Boolean).length;
+    this.ui.bagCount.textContent = used + "/" + BAG_SLOTS;
+    this.ui.inventory.innerHTML = this.renderSlotGrid(this.inventory, "bag-slot");
 
-    this.ui.equipment.innerHTML = this.equipment.weapon
-      ? `<div class="inventory-row"><b>Weapon:</b> ${this.equipment.weapon.name}</div>`
-      : '<div class="small">No weapon equipped.</div>';
+    this.ui.equipment.innerHTML = EQUIPMENT_SLOTS.map((slot) => {
+      const item = this.equipment[slot];
+      return '<button class="equipment-slot ' + (item ? "filled" : "") +
+        '" data-equipment-slot="' + slot +
+        '" title="' + this.escapeHtml(item ? item.name : slot) + '">' +
+        '<span class="slot-label">' + this.escapeHtml(slot) + '</span>' +
+        (item ? '<strong>' + this.escapeHtml(this.itemGlyph(item)) + '</strong>' : "") +
+        '</button>';
+    }).join("");
+
+    this.renderItemDetail();
+    if (this.bankOpen) this.renderBank();
   }
 
   log(message, tone = "") {
