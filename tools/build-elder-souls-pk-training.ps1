@@ -65,6 +65,9 @@ Set-Content $rl $r -NoNewline
 Write-Host '=== Apply PK Training Arena gameplay patch ==='
 ./tools/apply-elder-souls-pk-training.ps1
 
+Write-Host '=== Apply local controller gateway patch ==='
+./tools/apply-elder-souls-agent-gateway.ps1
+
 Write-Host '=== Download build dependencies ==='
 New-Item -ItemType Directory -Force deps | Out-Null
 $base='https://repo.maven.apache.org/maven2'
