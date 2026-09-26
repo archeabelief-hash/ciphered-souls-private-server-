@@ -1,19 +1,19 @@
 module.exports = {
-  appFolderName: 'CipheredSouls',
+  appFolderName: 'ElderSoulsRPGAlpha',
   downloads: {
     server: {
       id: '12juSipjaUSvAxL9S39czLFeN5G7d-2NE',
-      fileName: 'matrix-server.zip',
+      fileName: 'elder-souls-rpg-alpha-server-source.zip',
       folderName: 'matrix-server'
     },
     client: {
       id: '1OkZjJ4FvaOXeo-XQlBOLKUlan_EVBA5X',
-      fileName: 'matrix-client.zip',
+      fileName: 'elder-souls-rpg-alpha-client-source.zip',
       folderName: 'matrix-client'
     },
     cache: {
       id: '1fXs8vni-LtFvuUT1Ol4R37KsZMGaHv62',
-      fileName: 'matrix-cache.zip',
+      fileName: 'elder-souls-rpg-alpha-cache.zip',
       folderName: 'cache'
     }
   },
