@@ -24,6 +24,11 @@ jobs:
           git -C recovered/server reset --hard 61999df3c7a90e50b8ffb7000433d09d621c2ac7 >/dev/null
           echo '=== SAVE PATH REFERENCES ==='
           grep -RniE 'playersaves|player.?save|SerializableFilesManager|savePlayer|loadPlayer|characters|backup' recovered/server/src/main/java/com/rs | head -400 || true
-          echo '=== SERIALIZABLE FILES MANAGER ==='
+          echo '=== SETTINGS DATA PATH / WORLD ==='
+          grep -nE 'DATA_PATH|WORLD_ID' recovered/server/src/main/java/com/rs/Settings.java || true
+          echo '=== SERIALIZABLE FILES MANAGER PLAYER METHODS ==='
           f=$(find recovered/server/src/main/java -iname '*SerializableFilesManager*.java' | head -1)
-          if [ -n "$f" ]; then sed -n '1,280p' "$f"; fi
+          if [ -n "$f" ]; then
+            grep -nE 'containsPlayer|loadPlayer|savePlayer|storeObject|loadObject|Settings.DATA_PATH' "$f" || true
+            sed -n '390,620p' "$f"
+          fi
