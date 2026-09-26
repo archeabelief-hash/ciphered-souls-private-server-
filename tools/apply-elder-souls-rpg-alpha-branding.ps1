@@ -40,7 +40,7 @@ if (Test-Path $settings) {
     $s = $s.Replace('"Matrix", LIVE_IP', '"Elder Souls RPG Alpha", LIVE_IP')
     $s = [regex]::Replace($s, 'public static final String WEB_API_LINK = "[^"]*";', 'public static final String WEB_API_LINK = "";')
     $s = [regex]::Replace($s, 'public static final String HIGHSCORES_API_LINK = "[^"]*";', 'public static final String HIGHSCORES_API_LINK = "";')
-    foreach ($field in @('WEBSITE_LINK','FORUMS_LINK','HIGHSCORES_LINK','VOTE_LINK','YOUTUBE_LINK','DONATE_LINK','OFFENCES_LINK')) {
+    foreach ($field in @('WEBSITE_LINK','FORUMS_LINK','HIGHSCORES_LINK','VOTE_LINK','YOUTUBE_LINK','DONATE_LINK','OFFENCES_LINK','EMAIL_LINK','PASSWORD_LINK','COMMANDS_LINK','SHOWTHREAD_LINK','HELP_LINK')) {
         $s = [regex]::Replace($s, ('public static final String ' + $field + ' = "[^"]*";'), ('public static final String ' + $field + ' = "' + $projectUrl + '";'))
     }
     $s = $s.Replace('Matrix!', 'Elder Souls RPG Alpha!')
@@ -83,6 +83,8 @@ foreach ($file in $serverJava) {
     $next = $next.Replace('of Matrix', 'of Elder Souls RPG Alpha')
     $next = $next.Replace('Matrix is ', 'Elder Souls RPG Alpha is ')
     $next = $next.Replace('Matrix boss', 'Elder Souls boss')
+    $next = $next.Replace('Matrix RSPS', 'Elder Souls RPG Alpha')
+    $next = $next.Replace('Matrix guide', 'Elder Guide')
     $next = $next.Replace('Matrix friends chat', 'Elder Souls friends chat')
     $next = $next.Replace('Matrix Mode', 'Elder Souls Mode')
     $next = $next.Replace('"MATRIX"', '"ELDER SOULS"')
@@ -92,6 +94,7 @@ foreach ($file in $serverJava) {
     $next = $next.Replace('"Matrix", "Alchemical Hydra"', '"Elder Warden", "Alchemical Hydra"')
 
     $next = [regex]::Replace($next, 'https?://(?:www\.)?matrixrsps\.io[^"]*', $projectUrl)
+    $next = $next.Replace('matrixrsps.io', 'github')
 
     if ($next -ne $text) {
         Write-Text $file.FullName $next
@@ -140,7 +143,7 @@ if (Test-Path $runeLite) {
     Write-Text $runeLite $x
 }
 
-Replace-Literal "$clientRoot/src/main/java/logback.xml" '\${user.home}/MATRIX/logs/' '\${user.home}/ElderSoulsRPGAlpha/logs/'
+Replace-Literal "$clientRoot/src/main/java/logback.xml" '${user.home}/MATRIX/logs/' '${user.home}/ElderSoulsRPGAlpha/logs/'
 Replace-Literal "$clientRoot/src/main/java/Class291.java" '"Matrix.dat"' '"ElderSoulsRPGAlpha.dat"'
 
 foreach ($path in @(
