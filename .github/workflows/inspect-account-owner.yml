@@ -29,6 +29,8 @@ jobs:
           grep -RniE 'getRights\(|setRights\(|rights ==|rights >|rights <|playerRights|OWNER|ADMIN' recovered/server/src/main/java/com/rs/game/player recovered/server/src/main/java/com/rs/net 2>/dev/null | head -500 || true
           echo '=== SAVE LOAD REFERENCES ==='
           grep -RniE 'SerializableFilesManager|savePlayer|loadPlayer|player.*save|playersaves|players/' recovered/server/src/main/java 2>/dev/null | head -500 || true
+          echo '=== SETTINGS DATA PATH ==='
+          grep -nE 'DATA_PATH|WORLD_ID|HOSTED' recovered/server/src/main/java/com/rs/Settings.java | head -80 || true
           echo '=== COMMAND CORE ==='
           f=$(find recovered/server/src/main/java -iname 'Commands.java' | head -1)
           [ -n "$f" ] && sed -n '1,1400p' "$f" || true
