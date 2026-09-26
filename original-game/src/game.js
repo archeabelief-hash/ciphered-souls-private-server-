@@ -830,15 +830,61 @@ export class ElderSoulsGame {
   }
 
   spawnOre(x, z) {
-    const mesh = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(1.0, 0),
-      new THREE.MeshLambertMaterial({ color: 0x50545d, flatShading: true })
-    );
-    mesh.scale.set(1.25, 0.8, 1.0);
-    mesh.position.set(x, 0.65, z);
-    mesh.castShadow = true;
+    const group = new THREE.Group();
+    const stone = new THREE.MeshStandardMaterial({
+      color: 0x4e525c,
+      roughness: 0.86,
+      metalness: 0.10
+    });
+    const stoneDark = new THREE.MeshStandardMaterial({
+      color: 0x363943,
+      roughness: 0.92,
+      metalness: 0.08
+    });
+    const ore = new THREE.MeshStandardMaterial({
+      color: 0x685781,
+      emissive: 0x140c20,
+      roughness: 0.40,
+      metalness: 0.46
+    });
+
+    const rocks = [
+      [-0.42, 0.43, 0.04, 0.75, stone],
+      [0.36, 0.51, -0.08, 0.82, stoneDark],
+      [0.02, 0.74, 0.20, 0.68, stone]
+    ];
+
+    for (const [rx, ry, rz, scale, material] of rocks) {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(scale, 0),
+        material
+      );
+      rock.position.set(rx, ry, rz);
+      rock.scale.y = 0.72;
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      group.add(rock);
+    }
+
+    for (const [cx, cy, cz, scale] of [
+      [-0.18, 0.82, 0.54, 0.18],
+      [0.34, 0.72, 0.48, 0.15],
+      [0.08, 1.02, -0.08, 0.13]
+    ]) {
+      const crystal = new THREE.Mesh(
+        new THREE.OctahedronGeometry(scale, 0),
+        ore
+      );
+      crystal.position.set(cx, cy, cz);
+      crystal.scale.y = 1.65;
+      crystal.rotation.z = cx * 0.8;
+      crystal.castShadow = true;
+      group.add(crystal);
+    }
+
+    group.position.set(x, 0, z);
     this.grid.blockWorldPosition(x, z, 0);
-    mesh.userData.entity = {
+    group.userData.entity = {
       kind: "resource",
       resourceType: "ore",
       name: "Dusk Ore Vein",
@@ -849,11 +895,12 @@ export class ElderSoulsGame {
       maxHp: 4,
       respawnTicks: 16,
       active: true,
-      group: mesh
+      group
     };
-    this.resources.push(mesh.userData.entity);
-    this.clickables.push(mesh);
-    this.scene.add(mesh);
+
+    this.resources.push(group.userData.entity);
+    this.clickables.push(group);
+    this.scene.add(group);
   }
 
   spawnBankVault(x, z) {
