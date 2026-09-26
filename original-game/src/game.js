@@ -1159,6 +1159,7 @@ export class ElderSoulsGame {
     const groundHit = this.raycaster.intersectObject(this.ground, false)[0];
     if (groundHit) {
       this.selected = null;
+      this.selectionMarker.visible = false;
       const tile = worldToTile(groundHit.point.x, groundHit.point.z);
       if (this.setDestinationTile(tile, true)) {
         this.log("Walking to tile " + tile.x + ", " + tile.y + ".");
@@ -1169,6 +1170,8 @@ export class ElderSoulsGame {
 
   chooseEntity(entity) {
     this.selected = entity;
+    this.selectionMarker.position.set(entity.group.position.x, 0.075, entity.group.position.z);
+    this.selectionMarker.visible = true;
     const start = this.getPlayerTile();
     const target = worldToTile(entity.group.position.x, entity.group.position.z);
     const range = entity.kind === "bank" ? 2 : 1;
@@ -1218,6 +1221,19 @@ export class ElderSoulsGame {
     if (!this.bankOpen) {
       this.updatePlayer(dt);
       this.updateCamera(false, dt);
+      this.updateNpcAnimations(dt);
+    }
+
+    this.updateHitsplats(dt);
+
+    if (this.destinationMarker && this.destinationMarker.visible) {
+      const pulse = 0.60 + Math.sin(performance.now() * 0.0065) * 0.18;
+      this.destinationMarker.material.opacity = pulse;
+      this.destinationMarker.rotation.z += dt * 0.6;
+    }
+
+    if (this.selectionMarker && this.selectionMarker.visible) {
+      this.selectionMarker.rotation.z -= dt * 0.45;
     }
 
     this.tickAccumulator += dt * 1000;
