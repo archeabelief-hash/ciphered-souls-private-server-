@@ -11,12 +11,21 @@ $serverRoot = 'recovered/server'
 # ---------------------------------------------------------------------------
 $settingsPath = "$serverRoot/src/main/java/com/rs/Settings.java"
 $settings = Get-Content $settingsPath -Raw
+
+$oldLoginPath = 'public static final String LOGIN_DATA_PATH = "data/login/";'
+$newLoginPath = 'public static final String LOGIN_DATA_PATH = System.getenv("LOCALAPPDATA") == null ? "data/login/" : System.getenv("LOCALAPPDATA") + "/ElderSoulsRPGAlphaData/login/";'
+if ($settings.Contains($oldLoginPath)) {
+    $settings = $settings.Replace($oldLoginPath, $newLoginPath)
+} elseif (-not $settings.Contains('ElderSoulsRPGAlphaData/login/')) {
+    throw 'Could not patch Settings.LOGIN_DATA_PATH for persistent Elder Souls login saves.'
+}
+
 $oldDataPath = 'public static final String DATA_PATH = "data/world/";'
 $newDataPath = 'public static final String DATA_PATH = System.getenv("LOCALAPPDATA") == null ? "data/world/" : System.getenv("LOCALAPPDATA") + "/ElderSoulsRPGAlphaData/world/";'
 if ($settings.Contains($oldDataPath)) {
     $settings = $settings.Replace($oldDataPath, $newDataPath)
 } elseif (-not $settings.Contains('ElderSoulsRPGAlphaData/world/')) {
-    throw 'Could not patch Settings.DATA_PATH for persistent Elder Souls account saves.'
+    throw 'Could not patch Settings.DATA_PATH for persistent Elder Souls character saves.'
 }
 Set-Content $settingsPath $settings -NoNewline
 
@@ -204,6 +213,6 @@ $commands = $commands.Replace('(player.getUsername().equalsIgnoreCase("dragonkk"
 
 Set-Content $commandsPath $commands -NoNewline
 
-Write-Host 'Persistent player data path configured.'
+Write-Host 'Persistent login + character data paths configured.'
 Write-Host 'Master owner claim command installed: ::claimowner'
 Write-Host 'Owner status command installed: ::ownerstatus'
