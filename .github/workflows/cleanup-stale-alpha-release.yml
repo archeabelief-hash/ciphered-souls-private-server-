@@ -1,0 +1,22 @@
+name: Cleanup Stale Alpha Release
+
+on:
+  push:
+    branches:
+      - elder-souls-osrs-mechanics
+    paths:
+      - '.github/workflows/cleanup-stale-alpha-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove stale pre-alpha release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete elder-souls-rpg-alpha-v0.4.0 --repo archeabelief-hash/ciphered-souls-private-server- --yes --cleanup-tag
