@@ -71,6 +71,9 @@ Write-Host '=== Apply local controller gateway patch ==='
 Write-Host '=== Normalize Elder Souls RPG Alpha branding and paths ==='
 ./tools/apply-elder-souls-rpg-alpha-branding.ps1
 
+Write-Host '=== Verify no stale user-facing Matrix branding remains ==='
+./tools/verify-elder-souls-rpg-alpha-branding.ps1
+
 Write-Host '=== Download build dependencies ==='
 New-Item -ItemType Directory -Force deps | Out-Null
 $base='https://repo.maven.apache.org/maven2'
