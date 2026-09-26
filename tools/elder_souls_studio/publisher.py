@@ -14,6 +14,10 @@ class Buf:
     def u8(self,n): self.b.append(int(n)&0xff)
     def u16(self,n): self.b += struct.pack(">H", int(n)&0xffff)
     def i32(self,n): self.b += struct.pack(">i", int(n))
+    def i8(self,n): self.b += struct.pack(">b", max(-128,min(127,int(n))))
+    def u24(self,n):
+        n=int(n)&0xffffff
+        self.b += bytes([(n>>16)&0xff,(n>>8)&0xff,n&0xff])
     def string(self,s): self.b += str(s).encode("cp1252", errors="replace") + b"\x00"
     def bigsmart(self,n):
         n=int(n)
@@ -38,20 +42,62 @@ def encode_item(a):
         if key in g: b.u8(op); b.u16(int(g[key]))
     if g.get("stackable") is True: b.u8(11)
     if "value" in g: b.u8(12); b.i32(g["value"])
-    if "equip_slot" in g: b.u8(13); b.u8(g["equip_slot"])
-    if "equip_type" in g: b.u8(14); b.u8(g["equip_type"])
+    if "equip_slot" in g and int(g["equip_slot"]) >= 0: b.u8(13); b.u8(g["equip_slot"])
+    if "equip_type" in g and int(g["equip_type"]) >= 0: b.u8(14); b.u8(g["equip_type"])
     if g.get("members") is True: b.u8(16)
-    for op,key in [(23,"male_model_1"),(24,"male_model_2"),(25,"female_model_1"),(26,"female_model_2"),(78,"male_model_3"),(79,"female_model_3")]:
-        if key in g: b.u8(op); b.bigsmart(g[key])
+
+    for op,key in [
+        (23,"male_model_1"),(24,"male_model_2"),(25,"female_model_1"),(26,"female_model_2"),
+        (78,"male_model_3"),(79,"female_model_3"),
+        (90,"male_head_model_1"),(91,"female_head_model_1"),
+        (92,"male_head_model_2"),(93,"female_head_model_2")
+    ]:
+        if key in g and int(g[key]) >= 0:
+            b.u8(op); b.bigsmart(g[key])
+
+    ground=g.get("ground_options")
+    if ground is not None:
+        if isinstance(ground,str): ground=[x.strip() for x in ground.split(",")]
+        for i,opt in enumerate(ground[:5]):
+            if opt is not None:
+                b.u8(30+i); b.string(opt or "Hidden")
+
     opts=g.get("inventory_options")
     if opts is not None:
         if isinstance(opts,str): opts=[x.strip() for x in opts.split(",")]
         for i,opt in enumerate(opts[:5]):
-            b.u8(35+i); b.string(opt or "Hidden")
+            if opt is not None:
+                b.u8(35+i); b.string(opt or "Hidden")
+
     frm,to=_ints(g.get("recolor_from")),_ints(g.get("recolor_to"))
     if frm and len(frm)==len(to):
         b.u8(40); b.u8(len(frm))
         for x,y in zip(frm,to): b.u16(x); b.u16(y)
+
+    tfrm,tto=_ints(g.get("retexture_from")),_ints(g.get("retexture_to"))
+    if tfrm and len(tfrm)==len(tto):
+        b.u8(41); b.u8(len(tfrm))
+        for x,y in zip(tfrm,tto): b.u16(x); b.u16(y)
+
+    if g.get("tradeable") is True: b.u8(65)
+    if "yaw" in g: b.u8(95); b.u16(g["yaw"])
+    for op,key in [(110,"scale_x"),(111,"scale_y"),(112,"scale_z")]:
+        if key in g: b.u8(op); b.u16(g[key])
+    if "shadow" in g: b.u8(113); b.i8(g["shadow"])
+    if "lightness" in g:
+        b.u8(114); b.i8(int(round(int(g["lightness"])/5)))
+    if "team" in g: b.u8(115); b.u8(g["team"])
+
+    params=g.get("client_script_data") or {}
+    if params:
+        items=list(params.items())
+        b.u8(249); b.u8(len(items))
+        for key,value in items:
+            b.u8(1 if isinstance(value,str) else 0)
+            b.u24(int(key))
+            if isinstance(value,str): b.string(value)
+            else: b.i32(int(value))
+
     return b.done()
 
 def encode_npc(a):
@@ -139,6 +185,34 @@ def helper(settings,*args):
     if p.returncode:
         raise RuntimeError((p.stderr or p.stdout).strip())
     return (p.stdout or "").strip()
+
+def read_item_definition(item_id,settings):
+    raw=helper(settings,"itemjson",cache_dir(settings),int(item_id))
+    line=raw.strip().splitlines()[-1]
+    return json.loads(line)
+
+def list_cache_items(settings,force=False):
+    index_file=WORKSPACE/"item_index.json"
+    cache_path=str(cache_dir(settings))
+    if index_file.exists() and not force:
+        try:
+            payload=json.loads(index_file.read_text(encoding="utf-8"))
+            if payload.get("cache_dir")==cache_path and isinstance(payload.get("items"),list):
+                return payload["items"]
+        except Exception:
+            pass
+
+    raw=helper(settings,"itemindex",cache_path)
+    items=[]
+    for line in raw.splitlines():
+        if "\t" not in line: continue
+        sid,name=line.split("\t",1)
+        try: items.append({"id":int(sid),"name":name.strip()})
+        except Exception: continue
+    items.sort(key=lambda x:(x["name"].lower(),x["id"]))
+    WORKSPACE.mkdir(parents=True,exist_ok=True)
+    index_file.write_text(json.dumps({"cache_dir":cache_path,"items":items},ensure_ascii=False),encoding="utf-8")
+    return items
 
 def read_cache(settings,index,archive,file_id):
     with tempfile.NamedTemporaryFile(delete=False,suffix=".bin") as tmp:
