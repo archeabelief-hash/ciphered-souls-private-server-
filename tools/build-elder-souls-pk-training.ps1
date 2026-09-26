@@ -155,12 +155,178 @@ if($LASTEXITCODE -ne 0){throw 'jlink failed'}
 Write-Host '=== Build native Windows launcher ==='
 $src=@'
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
+using System.Web.Script.Serialization;
 using System.Windows.Forms;
+
+class GitHubAsset {
+  public string name { get; set; }
+  public string browser_download_url { get; set; }
+  public string digest { get; set; }
+}
+
+class GitHubRelease {
+  public string tag_name { get; set; }
+  public bool draft { get; set; }
+  public bool prerelease { get; set; }
+  public List<GitHubAsset> assets { get; set; }
+}
+
+class UpdateForm : Form {
+  readonly string url;
+  readonly string target;
+  readonly ProgressBar bar;
+  readonly Label label;
+  WebClient client;
+
+  public UpdateForm(string url,string target,string version){
+    this.url=url; this.target=target;
+    Text="Elder Souls RPG Alpha Updater";
+    Width=480; Height=150;
+    StartPosition=FormStartPosition.CenterScreen;
+    FormBorderStyle=FormBorderStyle.FixedDialog;
+    MaximizeBox=false; MinimizeBox=false; ControlBox=false;
+    label=new Label(){Left=20,Top=18,Width=425,Height=32,Text="Downloading Elder Souls RPG Alpha "+version+"..."};
+    bar=new ProgressBar(){Left=20,Top=58,Width=425,Height=24,Minimum=0,Maximum=100};
+    Controls.Add(label); Controls.Add(bar);
+    Shown += (s,e)=>BeginDownload();
+  }
+
+  void BeginDownload(){
+    client=new WebClient();
+    client.Headers[HttpRequestHeader.UserAgent]="ElderSoulsRPGAlpha-Updater";
+    client.DownloadProgressChanged += (s,e)=>{
+      if(IsDisposed)return;
+      bar.Value=Math.Max(0,Math.Min(100,e.ProgressPercentage));
+      label.Text="Downloading update... "+e.ProgressPercentage+"%";
+    };
+    client.DownloadFileCompleted += (s,e)=>{
+      if(IsDisposed)return;
+      if(e.Error!=null){
+        MessageBox.Show("The update could not be downloaded. The installed version will start instead.\n\n"+e.Error.Message,"Elder Souls RPG Alpha Updater");
+        DialogResult=DialogResult.Cancel;
+      } else if(e.Cancelled) {
+        DialogResult=DialogResult.Cancel;
+      } else {
+        bar.Value=100;
+        label.Text="Update downloaded.";
+        DialogResult=DialogResult.OK;
+      }
+      Close();
+    };
+    client.DownloadFileAsync(new Uri(url),target);
+  }
+
+  protected override void Dispose(bool disposing){
+    if(disposing && client!=null) client.Dispose();
+    base.Dispose(disposing);
+  }
+}
+
 class Launcher {
+  const string CurrentVersion="0.1.0";
+  const string ReleasePrefix="elder-souls-rpg-alpha-v";
+  const string SetupAssetName="Elder-Souls-RPG-Alpha-Setup.exe";
+  const string ReleasesApi="https://api.github.com/repos/archeabelief-hash/ciphered-souls-private-server-/releases?per_page=30";
+
+  static bool TryParseReleaseVersion(string tag,out Version version){
+    version=null;
+    if(String.IsNullOrWhiteSpace(tag) || !tag.StartsWith(ReleasePrefix,StringComparison.OrdinalIgnoreCase)) return false;
+    var raw=tag.Substring(ReleasePrefix.Length);
+    return Version.TryParse(raw,out version);
+  }
+
+  static string Sha256(string file){
+    using(var sha=SHA256.Create())
+    using(var stream=File.OpenRead(file)){
+      var hash=sha.ComputeHash(stream);
+      return BitConverter.ToString(hash).Replace("-","").ToLowerInvariant();
+    }
+  }
+
+  static bool VerifyDigest(string file,string digest){
+    if(String.IsNullOrWhiteSpace(digest) || !digest.StartsWith("sha256:",StringComparison.OrdinalIgnoreCase)) return true;
+    var expected=digest.Substring(7).Trim().ToLowerInvariant();
+    return String.Equals(Sha256(file),expected,StringComparison.OrdinalIgnoreCase);
+  }
+
+  static bool TryAutoUpdate(){
+    try{
+      ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+
+      string json;
+      using(var wc=new WebClient()){
+        wc.Headers[HttpRequestHeader.UserAgent]="ElderSoulsRPGAlpha-Updater";
+        wc.Headers[HttpRequestHeader.Accept]="application/vnd.github+json";
+        json=wc.DownloadString(ReleasesApi);
+      }
+
+      var releases=new JavaScriptSerializer().Deserialize<List<GitHubRelease>>(json);
+      if(releases==null)return false;
+
+      Version current;
+      if(!Version.TryParse(CurrentVersion,out current))return false;
+
+      GitHubRelease best=null;
+      Version bestVersion=current;
+
+      foreach(var release in releases){
+        if(release==null || release.draft)continue;
+        Version candidate;
+        if(!TryParseReleaseVersion(release.tag_name,out candidate))continue;
+        if(candidate>bestVersion){
+          best=release;
+          bestVersion=candidate;
+        }
+      }
+
+      if(best==null || best.assets==null)return false;
+
+      GitHubAsset setup=null;
+      foreach(var asset in best.assets){
+        if(asset!=null && String.Equals(asset.name,SetupAssetName,StringComparison.OrdinalIgnoreCase)){
+          setup=asset;
+          break;
+        }
+      }
+      if(setup==null || String.IsNullOrWhiteSpace(setup.browser_download_url))return false;
+
+      var temp=Path.Combine(Path.GetTempPath(),"Elder-Souls-RPG-Alpha-"+bestVersion+"-Setup.exe");
+      try{if(File.Exists(temp))File.Delete(temp);}catch{}
+
+      using(var form=new UpdateForm(setup.browser_download_url,temp,bestVersion.ToString())){
+        if(form.ShowDialog()!=DialogResult.OK || !File.Exists(temp))return false;
+      }
+
+      if(!VerifyDigest(temp,setup.digest)){
+        try{File.Delete(temp);}catch{}
+        MessageBox.Show("The downloaded update failed its SHA-256 verification. The installed version will start instead.","Elder Souls RPG Alpha Updater");
+        return false;
+      }
+
+      var restart=Path.Combine(Path.GetTempPath(),"elder-souls-rpg-alpha-update.cmd");
+      var gameExe=Path.Combine(AppContext.BaseDirectory,"Elder Souls RPG Alpha.exe");
+      var cmd=
+        "@echo off\r\n"+
+        "timeout /t 2 /nobreak >nul\r\n"+
+        "start /wait \"\" \""+temp+"\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS\r\n"+
+        "start \"\" \""+gameExe+"\"\r\n"+
+        "del /q \""+temp+"\" >nul 2>nul\r\n"+
+        "del /q \"%~f0\" >nul 2>nul\r\n";
+      File.WriteAllText(restart,cmd);
+      Process.Start(new ProcessStartInfo(){FileName=restart,UseShellExecute=true,WindowStyle=ProcessWindowStyle.Hidden});
+      return true;
+    }catch{
+      return false;
+    }
+  }
+
   static Process StartJava(string exe,string args,string wd,string log,bool input){
     var p=new Process(); p.StartInfo.FileName=exe; p.StartInfo.Arguments=args; p.StartInfo.WorkingDirectory=wd;
     p.StartInfo.UseShellExecute=false; p.StartInfo.CreateNoWindow=true; p.StartInfo.RedirectStandardOutput=true; p.StartInfo.RedirectStandardError=true; p.StartInfo.RedirectStandardInput=input;
@@ -168,25 +334,67 @@ class Launcher {
     p.OutputDataReceived+=(s,e)=>{if(e.Data!=null){sw.WriteLine(e.Data);sw.Flush();}}; p.ErrorDataReceived+=(s,e)=>{if(e.Data!=null){sw.WriteLine(e.Data);sw.Flush();}};
     p.Start(); p.BeginOutputReadLine(); p.BeginErrorReadLine(); return p;
   }
+
   static bool WaitPort(int port,Process server){
-    for(int i=0;i<180;i++){ if(server.HasExited)return false; try{using(var c=new TcpClient()){var a=c.BeginConnect("127.0.0.1",port,null,null); if(a.AsyncWaitHandle.WaitOne(500)){c.EndConnect(a);return true;}}}catch{} Thread.Sleep(500);} return false;
+    for(int i=0;i<180;i++){
+      if(server.HasExited)return false;
+      try{
+        using(var c=new TcpClient()){
+          var a=c.BeginConnect("127.0.0.1",port,null,null);
+          if(a.AsyncWaitHandle.WaitOne(500)){c.EndConnect(a);return true;}
+        }
+      }catch{}
+      Thread.Sleep(500);
+    }
+    return false;
   }
+
   [STAThread] static void Main(){
-    bool created; using(var m=new Mutex(true,"ElderSoulsRPGAlphaLocalLauncher",out created)){ if(!created){MessageBox.Show("Elder Souls RPG Alpha is already running.");return;}
-      string root=AppContext.BaseDirectory; string java=Path.Combine(root,"runtime","bin","java.exe"); string serverDir=Path.Combine(root,"server"); string clientDir=Path.Combine(root,"client"); string logs=Path.Combine(root,"logs"); Directory.CreateDirectory(logs);
-      Process server=null; try{
+    Application.EnableVisualStyles();
+    Application.SetCompatibleTextRenderingDefault(false);
+
+    bool created;
+    using(var m=new Mutex(true,"ElderSoulsRPGAlphaLocalLauncher",out created)){
+      if(!created){MessageBox.Show("Elder Souls RPG Alpha is already running.");return;}
+
+      if(TryAutoUpdate())return;
+
+      string root=AppContext.BaseDirectory;
+      string java=Path.Combine(root,"runtime","bin","java.exe");
+      string serverDir=Path.Combine(root,"server");
+      string clientDir=Path.Combine(root,"client");
+      string logs=Path.Combine(root,"logs");
+      Directory.CreateDirectory(logs);
+
+      Process server=null;
+      try{
         server=StartJava(java,"-Xms512m -Xmx2048m -cp \"elder-souls-rpg-alpha-server.jar;lib/*\" com.rs.GameLauncher 1 false false false",serverDir,Path.Combine(logs,"server.log"),true);
-        if(!WaitPort(43594,server)){MessageBox.Show("The local server did not finish starting. Open logs\\server.log for the exact error.","Elder Souls RPG Alpha");return;}
-        var client=StartJava(java,"-Xmx1536m -cp \"elder-souls-rpg-alpha-client.jar;lib/*\" Loader",clientDir,Path.Combine(logs,"client.log"),false); client.WaitForExit();
-      } catch(Exception ex){MessageBox.Show(ex.ToString(),"Elder Souls RPG Alpha startup error");}
-      finally{ if(server!=null && !server.HasExited){try{server.StandardInput.WriteLine("shutdown");server.StandardInput.Flush();if(!server.WaitForExit(15000))server.Kill();}catch{try{server.Kill();}catch{}}} }
+        if(!WaitPort(43594,server)){
+          MessageBox.Show("The local server did not finish starting. Open logs\\server.log for the exact error.","Elder Souls RPG Alpha");
+          return;
+        }
+        var client=StartJava(java,"-Xmx1536m -cp \"elder-souls-rpg-alpha-client.jar;lib/*\" Loader",clientDir,Path.Combine(logs,"client.log"),false);
+        client.WaitForExit();
+      }catch(Exception ex){
+        MessageBox.Show(ex.ToString(),"Elder Souls RPG Alpha startup error");
+      }finally{
+        if(server!=null && !server.HasExited){
+          try{
+            server.StandardInput.WriteLine("shutdown");
+            server.StandardInput.Flush();
+            if(!server.WaitForExit(15000))server.Kill();
+          }catch{
+            try{server.Kill();}catch{}
+          }
+        }
+      }
     }
   }
 }
 '@
 Set-Content launcher.cs $src
 $csc=(Get-ChildItem 'C:\Windows\Microsoft.NET\Framework64' -Recurse -Filter csc.exe | Sort-Object FullName -Descending | Select-Object -First 1).FullName
-& $csc /nologo /target:winexe /optimize+ /reference:System.Windows.Forms.dll /out:"$root/Elder Souls RPG Alpha.exe" launcher.cs
+& $csc /nologo /target:winexe /optimize+ /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll /out:"$root/Elder Souls RPG Alpha.exe" launcher.cs
 if($LASTEXITCODE -ne 0){throw 'Launcher compile failed'}
 
 @'
