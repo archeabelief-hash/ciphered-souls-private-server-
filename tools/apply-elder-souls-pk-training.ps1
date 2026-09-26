@@ -354,6 +354,24 @@ public static void modify(ItemConfig config) {
         // ELDER SOULS DUAT GUARDIAN PROTOTYPE
         // Temporary donor geometry; custom IDs and mechanics remain stable when original meshes replace these.
         switch (1027112447 * config.itemId) {
+        case 9753:
+        case 9754:
+            // Elder Souls Defence cape palette:
+            // deep royal purple cloth with gold trim.
+            if (config.originalColors != null && config.originalColors.length > 0) {
+                short[] elderCapeColors = new short[config.originalColors.length];
+                for (int i = 0; i < elderCapeColors.length; i++) {
+                    if (elderCapeColors.length == 1) {
+                        elderCapeColors[i] = (short) 48547; // #4B1F6F deep purple
+                    } else if (i >= elderCapeColors.length - 2) {
+                        elderCapeColors[i] = (short) (i == elderCapeColors.length - 1 ? 7726 : 8770); // dark/gold trim
+                    } else {
+                        elderCapeColors[i] = (short) (i % 2 == 0 ? 48547 : 49683); // purple + shadow purple
+                    }
+                }
+                config.modifiedColors = elderCapeColors;
+            }
+            break;
         case 29990:
             copy(20671, config);
             config.name = "Duat Khopesh";
