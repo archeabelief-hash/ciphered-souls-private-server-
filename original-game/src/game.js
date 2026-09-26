@@ -603,9 +603,13 @@ export class ElderSoulsGame {
         action.active = false;
         action.group.visible = false;
         action.respawnTicksLeft = action.respawnTicks;
-        this.addItem(action.item, 1);
-        this.addXp(action.skill, action.xp);
-        this.log(`You gather 1 × ${action.item.name}.`, "good");
+        const stored = this.addItem(action.item, 1);
+        if (stored) {
+          this.addXp(action.skill, action.xp);
+          this.log("You gather 1 × " + action.item.name + ".", "good");
+        } else {
+          this.log("Your field bag is full.", "bad");
+        }
         this.pendingAction = null;
       }
       return;
@@ -616,10 +620,11 @@ export class ElderSoulsGame {
         this.pendingAction = null;
         return;
       }
-      const weaponBonus = this.equipment.weapon ? 4 : 0;
-      const attack = this.skills.bladework.level + weaponBonus;
-      const force = this.skills.force.level + weaponBonus;
-      const damage = Math.max(1, Math.floor(Math.random() * (3 + force * 0.8 + attack * 0.25)));
+      const totals = this.getEquipmentStats();
+      const attack = this.skills.bladework.level + totals.accuracy;
+      const force = this.skills.force.level + totals.power;
+      const maxHit = Math.max(2, Math.floor(2 + force * 0.72 + attack * 0.2));
+      const damage = Math.max(1, Math.floor(Math.random() * (maxHit + 1)));
       action.hp = Math.max(0, action.hp - damage);
       this.addXp("bladework", damage * 1.2);
       this.addXp("force", damage * 1.1);
@@ -643,8 +648,11 @@ export class ElderSoulsGame {
       if (!npc.alive) continue;
       if (this.pendingAction !== npc) continue;
       if (this.distance2D(this.player.position, npc.group.position) > 2.8) continue;
+      const totals = this.getEquipmentStats();
       const ward = this.skills.ward.level;
-      const max = Math.max(1, Math.floor(2 + npc.combatLevel * 0.65 - ward * 0.15));
+      const mitigation = Math.floor((totals.armor + totals.ward + ward) / 8);
+      const rawMax = Math.max(1, Math.floor(2 + npc.combatLevel * 0.65));
+      const max = Math.max(1, rawMax - mitigation);
       const damage = Math.floor(Math.random() * (max + 1));
       if (damage > 0) {
         this.hp = Math.max(0, this.hp - damage);
