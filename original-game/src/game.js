@@ -179,6 +179,15 @@ export class ElderSoulsGame {
     this.destinationMarker.visible = false;
     this.scene.add(this.destinationMarker);
 
+    this.selectionMarker = new THREE.Mesh(
+      new THREE.RingGeometry(0.52, 0.62, 20),
+      new THREE.MeshBasicMaterial({ color: 0xb45c45, transparent: true, opacity: 0.72, side: THREE.DoubleSide })
+    );
+    this.selectionMarker.rotation.x = -Math.PI / 2;
+    this.selectionMarker.position.y = 0.075;
+    this.selectionMarker.visible = false;
+    this.scene.add(this.selectionMarker);
+
     this.player = this.createHumanoid(0x312820, 0xb69266, 0x17120f);
     this.player.position.set(0, 0, 0);
     this.scene.add(this.player);
@@ -867,11 +876,100 @@ export class ElderSoulsGame {
       group,
       attackCooldown: 0,
       respawnTicks: 0,
-      home: new THREE.Vector3(x, 0, z)
+      home: new THREE.Vector3(x, 0, z),
+      attackAnim: 0,
+      idlePhase: Math.random() * Math.PI * 2
     };
     this.npcs.push(group.userData.entity);
     this.clickables.push(group);
     this.scene.add(group);
+  }
+
+  createHitsplat(amount, target, incoming = false) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 72;
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = incoming ? "rgba(105,24,21,0.94)" : "rgba(59,24,20,0.94)";
+    ctx.strokeStyle = incoming ? "#f0b19a" : "#f4d27d";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(64, 36, 27, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff7dd";
+    ctx.font = "bold 31px Georgia";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(amount), 64, 37);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false
+    });
+
+    const sprite = new THREE.Sprite(material);
+    const base = target && target.position ? target.position : this.player.position;
+    sprite.position.copy(base);
+    sprite.position.y += 3.15;
+    sprite.scale.set(0.82, 0.46, 1);
+    this.scene.add(sprite);
+
+    this.hitsplats.push({
+      sprite,
+      texture,
+      life: 0.86,
+      maxLife: 0.86
+    });
+  }
+
+  updateHitsplats(dt) {
+    for (let i = this.hitsplats.length - 1; i >= 0; i--) {
+      const hit = this.hitsplats[i];
+      hit.life -= dt;
+      hit.sprite.position.y += dt * 0.48;
+      hit.sprite.material.opacity = Math.max(0, Math.min(1, hit.life / 0.28));
+
+      if (hit.life <= 0) {
+        this.scene.remove(hit.sprite);
+        hit.sprite.material.dispose();
+        hit.texture.dispose();
+        this.hitsplats.splice(i, 1);
+      }
+    }
+  }
+
+  updateNpcAnimations(dt) {
+    const now = performance.now() * 0.0023;
+
+    for (const npc of this.npcs) {
+      if (!npc.alive || !npc.group.visible) continue;
+      const visuals = npc.group.userData.visuals;
+      if (!visuals) continue;
+
+      if (npc.attackAnim > 0) {
+        npc.attackAnim = Math.max(0, npc.attackAnim - dt);
+        const phase = 1 - npc.attackAnim / 0.34;
+        const swing = Math.sin(Math.min(1, phase) * Math.PI) * 1.02;
+        visuals.rightArmPivot.rotation.x = -swing;
+        visuals.leftArmPivot.rotation.x = swing * 0.24;
+      } else {
+        const idle = Math.sin(now + npc.idlePhase) * 0.035;
+        visuals.body.position.y = idle;
+        const settle = Math.min(1, dt * 8);
+        visuals.rightArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.rightArmPivot.rotation.x, 0, settle);
+        visuals.leftArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.leftArmPivot.rotation.x, 0, settle);
+      }
+    }
   }
 
   bindEvents() {
