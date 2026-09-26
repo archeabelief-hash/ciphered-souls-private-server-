@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import colorsys
 import shutil
 import subprocess
 import sys
@@ -22,7 +23,7 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
 APP_NAME = "Elder Souls Content Studio"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 USER_HOME = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ElderSoulsContentStudio"
 WORKSPACE = USER_HOME / "workspace"
@@ -363,6 +364,279 @@ class Studio(tk.Tk):
         for a in self.store.load_assets():
             self.tree.insert("", "end", iid=str(a.asset_id), values=(a.asset_id,a.asset_type,a.name))
         self.status.set(f"{len(self.store.load_assets())} assets loaded")
+
+    def ensure_item_catalog(self, force=False):
+        try:
+            self.status.set("Indexing installed game items..." if force else "Loading installed game item index...")
+            self.update_idletasks()
+            self.item_catalog = list_cache_items(self.store.settings(), force=force)
+            self.filter_game_items()
+            self.status.set(f"{len(self.item_catalog):,} in-game items indexed")
+        except Exception as e:
+            self.item_catalog = []
+            self.status.set("Game item index unavailable")
+            messagebox.showerror("Item index failed", str(e))
+
+    def filter_game_items(self):
+        if not hasattr(self, "game_item_tree"):
+            return
+        query = self.item_search.get().strip().lower() if hasattr(self, "item_search") else ""
+        for row in self.game_item_tree.get_children():
+            self.game_item_tree.delete(row)
+
+        if not self.item_catalog:
+            return
+
+        if query:
+            if query.isdigit():
+                matches = [x for x in self.item_catalog if query in str(x["id"]) or query in x["name"].lower()]
+            else:
+                words = [w for w in query.split() if w]
+                matches = [x for x in self.item_catalog if all(w in x["name"].lower() for w in words)]
+        else:
+            matches = self.item_catalog
+
+        for item in matches[:2500]:
+            self.game_item_tree.insert("", "end", iid=f"game-{item['id']}", values=(item["id"], item["name"]))
+        self.status.set(f"{len(matches):,} matching game items" + (" (showing first 2,500)" if len(matches) > 2500 else ""))
+
+    def open_game_item(self):
+        sel = self.game_item_tree.selection()
+        if not sel:
+            return
+        values = self.game_item_tree.item(sel[0], "values")
+        if not values:
+            return
+        try:
+            item_id = int(values[0])
+            decoded = read_item_definition(item_id, self.store.settings())
+            a = Asset(
+                asset_id=item_id,
+                name=decoded.get("name") or f"Item {item_id}",
+                asset_type="item",
+                description="Loaded directly from the installed Elder Souls 718 cache.",
+                tags=["game-cache"],
+                game_data=decoded.get("game_data") or {"base_id": item_id},
+            )
+            a.game_data["base_id"] = item_id
+            self.load_form(a)
+            self.status.set(f"Loaded in-game item {item_id}: {a.name}")
+        except Exception as e:
+            messagebox.showerror("Open game item failed", str(e))
+
+    @staticmethod
+    def _hex_to_hsl16(value):
+        value = value.strip().lstrip("#")
+        if len(value) != 6:
+            raise ValueError(f"Invalid hex color: {value}")
+        r = int(value[0:2], 16) / 255.0
+        g = int(value[2:4], 16) / 255.0
+        b = int(value[4:6], 16) / 255.0
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        hue = max(0, min(63, int(round(h * 63))))
+        sat = max(0, min(7, int(round(s * 7))))
+        light = max(0, min(127, int(round(l * 127))))
+        return (hue << 10) | (sat << 7) | light
+
+    @staticmethod
+    def _hsl16_to_hex(value):
+        v = int(value) & 0xffff
+        hue = ((v >> 10) & 0x3f) / 63.0
+        sat = ((v >> 7) & 0x07) / 7.0
+        light = (v & 0x7f) / 127.0
+        r, g, b = colorsys.hls_to_rgb(hue, light, sat)
+        return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
+
+    def _current_game_data(self):
+        return json.loads(self.game_data.get("1.0", "end").strip() or "{}")
+
+    def _set_game_data(self, data):
+        self.game_data.delete("1.0", "end")
+        self.game_data.insert("1.0", json.dumps(data, indent=2))
+
+    def edit_item_attributes(self):
+        if self.vars["asset_type"].get() != "item":
+            messagebox.showinfo("Item editor", "Open or create an item first.")
+            return
+        try:
+            data = self._current_game_data()
+        except Exception as e:
+            messagebox.showerror("Item editor", str(e))
+            return
+
+        win = tk.Toplevel(self)
+        win.title(f"Item Attributes — {self.vars['name'].get()} [{self.vars['asset_id'].get()}]")
+        win.geometry("760x760")
+        win.minsize(660, 620)
+
+        notebook = ttk.Notebook(win)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+
+        basic = ttk.Frame(notebook, padding=10)
+        worn = ttk.Frame(notebook, padding=10)
+        options = ttk.Frame(notebook, padding=10)
+        params = ttk.Frame(notebook, padding=10)
+        notebook.add(basic, text="Model / Item")
+        notebook.add(worn, text="Worn Models")
+        notebook.add(options, text="Options")
+        notebook.add(params, text="Advanced Params")
+
+        numeric_fields = [
+            ("model_id","Inventory model"),("model_zoom","Inventory zoom"),
+            ("rotation_x","Rotation X"),("rotation_y","Rotation Y"),
+            ("offset_x","Offset X"),("offset_y","Offset Y"),("yaw","Yaw / extra rotation"),
+            ("value","Value"),("equip_slot","Equipment slot"),("equip_type","Equipment type"),
+            ("scale_x","Model scale X"),("scale_y","Model scale Y"),("scale_z","Model scale Z"),
+            ("shadow","Shadow"),("lightness","Lightness"),("team","Team")
+        ]
+        field_vars = {}
+        for row,(key,label) in enumerate(numeric_fields):
+            var = tk.StringVar(value=str(data.get(key, TYPE_TEMPLATES["item"].get(key, 0))))
+            field_vars[key] = var
+            ttk.Label(basic,text=label).grid(row=row,column=0,sticky="w",pady=3,padx=(0,8))
+            ttk.Entry(basic,textvariable=var).grid(row=row,column=1,sticky="ew",pady=3)
+        basic.columnconfigure(1,weight=1)
+
+        bool_vars = {}
+        bool_frame = ttk.LabelFrame(basic,text="Flags",padding=8)
+        bool_frame.grid(row=len(numeric_fields),column=0,columnspan=2,sticky="ew",pady=(10,0))
+        for key,label in [("stackable","Stackable"),("members","Members"),("tradeable","Tradeable")]:
+            v=tk.BooleanVar(value=bool(data.get(key,False)))
+            bool_vars[key]=v
+            ttk.Checkbutton(bool_frame,text=label,variable=v).pack(side="left",padx=8)
+
+        worn_fields = [
+            ("male_model_1","Male body model 1"),("male_model_2","Male body model 2"),("male_model_3","Male body model 3"),
+            ("female_model_1","Female body model 1"),("female_model_2","Female body model 2"),("female_model_3","Female body model 3"),
+            ("male_head_model_1","Male head model 1"),("male_head_model_2","Male head model 2"),
+            ("female_head_model_1","Female head model 1"),("female_head_model_2","Female head model 2")
+        ]
+        worn_vars={}
+        for row,(key,label) in enumerate(worn_fields):
+            var=tk.StringVar(value=str(data.get(key,-1)))
+            worn_vars[key]=var
+            ttk.Label(worn,text=label).grid(row=row,column=0,sticky="w",pady=4,padx=(0,8))
+            ttk.Entry(worn,textvariable=var).grid(row=row,column=1,sticky="ew",pady=4)
+        worn.columnconfigure(1,weight=1)
+
+        inventory = list(data.get("inventory_options") or [None]*5)
+        ground = list(data.get("ground_options") or [None]*5)
+        inventory += [None]*(5-len(inventory))
+        ground += [None]*(5-len(ground))
+        inv_vars=[]; ground_vars=[]
+        ttk.Label(options,text="Inventory right-click options",font=("Segoe UI",10,"bold")).grid(row=0,column=0,columnspan=2,sticky="w",pady=(0,6))
+        for i in range(5):
+            v=tk.StringVar(value="" if inventory[i] is None else str(inventory[i])); inv_vars.append(v)
+            ttk.Label(options,text=f"Inventory {i+1}").grid(row=1+i,column=0,sticky="w",pady=3)
+            ttk.Entry(options,textvariable=v).grid(row=1+i,column=1,sticky="ew",pady=3)
+        ttk.Label(options,text="Ground right-click options",font=("Segoe UI",10,"bold")).grid(row=7,column=0,columnspan=2,sticky="w",pady=(12,6))
+        for i in range(5):
+            v=tk.StringVar(value="" if ground[i] is None else str(ground[i])); ground_vars.append(v)
+            ttk.Label(options,text=f"Ground {i+1}").grid(row=8+i,column=0,sticky="w",pady=3)
+            ttk.Entry(options,textvariable=v).grid(row=8+i,column=1,sticky="ew",pady=3)
+        options.columnconfigure(1,weight=1)
+
+        ttk.Label(params,text="Client-script / combat / attribute parameters (JSON)",font=("Segoe UI",10,"bold")).pack(anchor="w")
+        ttk.Label(params,text="These numeric keys contain many item stats and engine attributes. Edit freely; existing unknown keys are preserved.",wraplength=680).pack(anchor="w",pady=(3,6))
+        param_text=tk.Text(params,wrap="none",font=("Consolas",10))
+        param_text.pack(fill="both",expand=True)
+        param_text.insert("1.0",json.dumps(data.get("client_script_data") or {},indent=2))
+
+        def apply():
+            try:
+                for key,var in field_vars.items():
+                    data[key]=int(var.get().strip() or 0)
+                for key,var in worn_vars.items():
+                    data[key]=int(var.get().strip() or -1)
+                for key,var in bool_vars.items():
+                    data[key]=bool(var.get())
+                data["inventory_options"]=[v.get().strip() or None for v in inv_vars]
+                data["ground_options"]=[v.get().strip() or None for v in ground_vars]
+                raw=json.loads(param_text.get("1.0","end").strip() or "{}")
+                data["client_script_data"]={str(k):v for k,v in raw.items()}
+                self._set_game_data(data)
+                self.status.set("Item attributes updated — publish to write them into the game cache")
+                win.destroy()
+            except Exception as e:
+                messagebox.showerror("Invalid item attribute",str(e),parent=win)
+
+        ttk.Button(win,text="Apply to Item",command=apply).pack(side="right",padx=12,pady=(0,12))
+
+    def edit_item_colors(self):
+        if self.vars["asset_type"].get() != "item":
+            messagebox.showinfo("Color editor", "Open or create an item first.")
+            return
+        try:
+            data=self._current_game_data()
+        except Exception as e:
+            messagebox.showerror("Color editor",str(e))
+            return
+
+        win=tk.Toplevel(self)
+        win.title(f"Item Colors — {self.vars['name'].get()} [{self.vars['asset_id'].get()}]")
+        win.geometry("720x520")
+        frm=ttk.Frame(win,padding=12); frm.pack(fill="both",expand=True)
+
+        from_var=tk.StringVar(value=", ".join(map(str,data.get("recolor_from") or [])))
+        to_var=tk.StringVar(value=", ".join(map(str,data.get("recolor_to") or [])))
+        hex_var=tk.StringVar(value=", ".join(self._hsl16_to_hex(x) for x in (data.get("recolor_to") or [])))
+        tfrom_var=tk.StringVar(value=", ".join(map(str,data.get("retexture_from") or [])))
+        tto_var=tk.StringVar(value=", ".join(map(str,data.get("retexture_to") or [])))
+
+        ttk.Label(frm,text="Model recolors",font=("Segoe UI",11,"bold")).grid(row=0,column=0,columnspan=2,sticky="w")
+        ttk.Label(frm,text="Source HSL16 colors").grid(row=1,column=0,sticky="w",pady=5)
+        ttk.Entry(frm,textvariable=from_var).grid(row=1,column=1,sticky="ew",pady=5)
+        ttk.Label(frm,text="Target HSL16 colors").grid(row=2,column=0,sticky="w",pady=5)
+        ttk.Entry(frm,textvariable=to_var).grid(row=2,column=1,sticky="ew",pady=5)
+        ttk.Label(frm,text="Target HEX colors").grid(row=3,column=0,sticky="w",pady=5)
+        ttk.Entry(frm,textvariable=hex_var).grid(row=3,column=1,sticky="ew",pady=5)
+        ttk.Label(frm,text="Use comma-separated #RRGGBB values. HEX is converted to the 718 packed HSL color format.",wraplength=650).grid(row=4,column=0,columnspan=2,sticky="w",pady=(0,14))
+
+        ttk.Label(frm,text="Texture replacements",font=("Segoe UI",11,"bold")).grid(row=5,column=0,columnspan=2,sticky="w")
+        ttk.Label(frm,text="Source texture IDs").grid(row=6,column=0,sticky="w",pady=5)
+        ttk.Entry(frm,textvariable=tfrom_var).grid(row=6,column=1,sticky="ew",pady=5)
+        ttk.Label(frm,text="Target texture IDs").grid(row=7,column=0,sticky="w",pady=5)
+        ttk.Entry(frm,textvariable=tto_var).grid(row=7,column=1,sticky="ew",pady=5)
+        frm.columnconfigure(1,weight=1)
+
+        preview=tk.Text(frm,height=8,wrap="word",font=("Consolas",10))
+        preview.grid(row=8,column=0,columnspan=2,sticky="nsew",pady=(12,0))
+        frm.rowconfigure(8,weight=1)
+
+        def nums(value):
+            return [int(x.strip()) for x in value.split(",") if x.strip()]
+
+        def sync_hex():
+            try:
+                vals=[x.strip() for x in hex_var.get().split(",") if x.strip()]
+                converted=[self._hex_to_hsl16(x) for x in vals]
+                to_var.set(", ".join(map(str,converted)))
+                preview.delete("1.0","end")
+                preview.insert("1.0","HEX -> 718 HSL16\n"+ "\n".join(f"{h}  ->  {v}" for h,v in zip(vals,converted)))
+            except Exception as e:
+                messagebox.showerror("Color conversion",str(e),parent=win)
+
+        def apply():
+            try:
+                frm_vals=nums(from_var.get()); to_vals=nums(to_var.get())
+                if len(frm_vals)!=len(to_vals):
+                    raise ValueError("Source and target recolor lists must contain the same number of colors.")
+                tf=nums(tfrom_var.get()); tt=nums(tto_var.get())
+                if len(tf)!=len(tt):
+                    raise ValueError("Source and target texture lists must contain the same number of IDs.")
+                data["recolor_from"]=frm_vals
+                data["recolor_to"]=to_vals
+                data["retexture_from"]=tf
+                data["retexture_to"]=tt
+                self._set_game_data(data)
+                self.status.set("Item colors updated — publish to write them into the game cache")
+                win.destroy()
+            except Exception as e:
+                messagebox.showerror("Color editor",str(e),parent=win)
+
+        buttons=ttk.Frame(win,padding=(12,0,12,12)); buttons.pack(fill="x")
+        ttk.Button(buttons,text="Convert HEX to HSL16",command=sync_hex).pack(side="left")
+        ttk.Button(buttons,text="Apply Colors",command=apply).pack(side="right")
 
     def on_select(self, _event=None):
         sel = self.tree.selection()
