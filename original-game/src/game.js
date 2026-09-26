@@ -727,6 +727,7 @@ export class ElderSoulsGame {
       group.add(crown);
     }
     group.position.set(x, 0, z);
+    this.grid.blockWorldPosition(x, z, 0);
     group.userData.entity = {
       kind: "resource",
       resourceType: "tree",
@@ -753,6 +754,7 @@ export class ElderSoulsGame {
     mesh.scale.set(1.25, 0.8, 1.0);
     mesh.position.set(x, 0.65, z);
     mesh.castShadow = true;
+    this.grid.blockWorldPosition(x, z, 0);
     mesh.userData.entity = {
       kind: "resource",
       resourceType: "ore",
@@ -798,6 +800,7 @@ export class ElderSoulsGame {
     group.add(lock);
 
     group.position.set(x, 0, z);
+    this.grid.blockWorldPosition(x, z, 1);
     group.userData.entity = {
       kind: "bank",
       name: "Veiled Vault",
@@ -826,6 +829,7 @@ export class ElderSoulsGame {
     glow.position.y = 2.8;
     group.add(glow);
     group.position.set(x, 0, z);
+    this.grid.blockWorldPosition(x, z, 0);
     group.userData.entity = { kind: "shrine", name: "Veiled Shrine", group };
     this.clickables.push(group);
     this.scene.add(group);
