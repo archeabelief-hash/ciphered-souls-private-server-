@@ -390,25 +390,58 @@ export class ElderSoulsGame {
 
   bindEvents() {
     window.addEventListener("resize", () => this.resize());
-    window.addEventListener("keydown", (e) => this.keys.add(e.key.toLowerCase()));
-    window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
-    this.canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance + e.deltaY * 0.015, 14, 48);
+    window.addEventListener("keydown", (event) => {
+      this.keys.add(event.key.toLowerCase());
+      if (event.key === "Escape" && this.bankOpen) this.closeBank();
+    });
+    window.addEventListener("keyup", (event) => this.keys.delete(event.key.toLowerCase()));
+    window.addEventListener("beforeunload", () => this.saveGame());
+
+    this.canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance + event.deltaY * 0.015, 14, 48);
     }, { passive: false });
-    this.canvas.addEventListener("pointerdown", (e) => this.onPointer(e));
-    this.ui.inventory.addEventListener("click", (e) => {
-      const row = e.target.closest("[data-inventory-index]");
-      if (!row) return;
-      const index = Number(row.dataset.inventoryIndex);
-      const item = this.inventory[index];
-      if (!item) return;
-      if (item.type === "weapon") {
-        this.equipment.weapon = item;
-        this.inventory.splice(index, 1);
-        this.log(`You wield the ${item.name}.`, "good");
-        this.renderUI();
-      }
+
+    this.canvas.addEventListener("pointerdown", (event) => this.onPointer(event));
+
+    this.ui.inventory.addEventListener("click", (event) => {
+      const slot = event.target.closest("[data-bag-slot]");
+      if (!slot) return;
+      this.selectBagItem(Number(slot.dataset.bagSlot));
+    });
+
+    this.ui.inventory.addEventListener("dblclick", (event) => {
+      const slot = event.target.closest("[data-bag-slot]");
+      if (!slot) return;
+      this.quickUseBagItem(Number(slot.dataset.bagSlot));
+    });
+
+    this.ui.equipment.addEventListener("click", (event) => {
+      const slot = event.target.closest("[data-equipment-slot]");
+      if (!slot) return;
+      this.selectEquipmentItem(slot.dataset.equipmentSlot);
+    });
+
+    this.ui.itemDetail.addEventListener("click", (event) => {
+      const action = event.target.closest("[data-item-action]");
+      if (!action) return;
+      this.handleItemAction(action.dataset.itemAction);
+    });
+
+    this.ui.bankClose.addEventListener("click", () => this.closeBank());
+    this.ui.bankDepositAll.addEventListener("click", () => this.depositBag());
+    this.ui.bankDepositEquipment.addEventListener("click", () => this.depositEquipment());
+
+    this.ui.bankGrid.addEventListener("click", (event) => {
+      const slot = event.target.closest("[data-bank-slot]");
+      if (!slot) return;
+      this.withdrawBankItem(Number(slot.dataset.bankSlot), event.shiftKey);
+    });
+
+    this.ui.bankBagGrid.addEventListener("click", (event) => {
+      const slot = event.target.closest("[data-bank-bag-slot]");
+      if (!slot) return;
+      this.depositBagSlot(Number(slot.dataset.bankBagSlot), event.shiftKey);
     });
   }
 
