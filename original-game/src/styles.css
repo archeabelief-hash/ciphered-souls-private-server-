@@ -116,3 +116,243 @@ button, input { font: inherit; }
   .log { left: 244px; right: 254px; }
   .help { left: 244px; }
 }
+
+
+/* --- Elder Souls inventory, equipment, stats, and bank systems --- */
+.slot-grid {
+  display: grid;
+  gap: 5px;
+}
+
+.bag-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bank-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  max-height: 440px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.item-slot,
+.equipment-slot {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 1px solid #4d422f;
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(255,255,255,.025), rgba(0,0,0,.08)),
+    #17130f;
+  color: #d6c5a2;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.38);
+}
+
+.item-slot:hover,
+.equipment-slot:hover,
+.item-slot.filled:hover,
+.equipment-slot.filled:hover {
+  border-color: #a17b43;
+  background: #2b2218;
+}
+
+.item-slot.filled,
+.equipment-slot.filled {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(174,129,60,.14), transparent 58%),
+    #211a13;
+}
+
+.item-glyph,
+.equipment-slot strong {
+  font-size: 14px;
+  color: #e6c887;
+  letter-spacing: .06em;
+}
+
+.item-amount {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: #f1dfab;
+  text-shadow: 0 1px 2px #000;
+}
+
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.equipment-slot {
+  min-height: 54px;
+  aspect-ratio: auto;
+  padding-top: 15px;
+}
+
+.slot-label {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 8px;
+  text-transform: uppercase;
+  opacity: .55;
+}
+
+.item-detail {
+  min-height: 96px;
+  padding: 8px;
+  border: 1px solid rgba(188, 155, 97, .20);
+  border-radius: 4px;
+  background: rgba(9, 8, 7, .36);
+}
+
+.item-name {
+  margin-bottom: 4px;
+  color: #ebca87;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.item-line {
+  margin-top: 5px;
+}
+
+.item-stats {
+  margin-top: 6px;
+  color: #bcd7a6;
+  line-height: 1.45;
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.es-button {
+  padding: 5px 9px;
+  border: 1px solid #775d37;
+  border-radius: 3px;
+  background: linear-gradient(#322719, #201810);
+  color: #e4cfaa;
+  cursor: pointer;
+}
+
+.es-button:hover {
+  border-color: #bd9250;
+  background: linear-gradient(#443420, #2a2015);
+}
+
+.combat-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.combat-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 5px;
+  border: 1px solid rgba(188, 155, 97, .15);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.combat-stat b {
+  color: #cbe0b5;
+}
+
+.bank-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 34px;
+  background: rgba(3, 3, 2, .74);
+  backdrop-filter: blur(2px);
+}
+
+.bank-modal.hidden {
+  display: none;
+}
+
+.bank-window {
+  width: min(1040px, 94vw);
+  max-height: min(760px, 92vh);
+  overflow: hidden;
+  border: 1px solid #8c6b3c;
+  border-radius: 6px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(140,96,42,.11), transparent 35%),
+    #15110d;
+  box-shadow: 0 22px 80px rgba(0,0,0,.68);
+}
+
+.bank-header,
+.bank-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(188,155,97,.22);
+}
+
+.bank-header {
+  justify-content: space-between;
+}
+
+.bank-title {
+  color: #e5bd73;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.bank-toolbar {
+  flex-wrap: wrap;
+}
+
+.bank-hint {
+  margin-left: auto;
+}
+
+.bank-layout {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 14px;
+  max-height: 640px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.bank-layout h3 {
+  margin: 0 0 8px;
+  color: #cda866;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.right-panel {
+  width: 330px;
+}
+
+.log {
+  right: 354px;
+}
+
+@media (max-width: 1100px) {
+  .right-panel { width: 280px; }
+  .log { right: 304px; }
+  .bank-layout { grid-template-columns: 1fr 210px; }
+  .bank-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
