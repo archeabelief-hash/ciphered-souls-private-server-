@@ -349,18 +349,35 @@ class Launcher {
     }
   }
 
-  static void EnsurePersistentWorld(string serverDir){
+  static void EnsurePersistentData(string serverDir){
     try{
       var local=Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-      var persistent=Path.Combine(local,"ElderSoulsRPGAlphaData","world");
-      var worldZero=Path.Combine(persistent,"0");
+      var root=Path.Combine(local,"ElderSoulsRPGAlphaData");
+      var world=Path.Combine(root,"world");
+      var worldZero=Path.Combine(world,"0");
+      var login=Path.Combine(root,"login");
+
       if(!Directory.Exists(worldZero)){
-        var bundled=Path.Combine(serverDir,"data","world");
-        if(Directory.Exists(bundled)) CopyDirectory(bundled,persistent);
+        var bundledWorld=Path.Combine(serverDir,"data","world");
+        if(Directory.Exists(bundledWorld)) CopyDirectory(bundledWorld,world);
+
+        var oldPkWorld=Path.Combine(local,"Programs","Elder Souls Scape PK Training","server","data","world");
+        if(Directory.Exists(oldPkWorld)) CopyDirectory(oldPkWorld,world);
+
         Directory.CreateDirectory(worldZero);
       }
+
+      if(!Directory.Exists(login)){
+        var bundledLogin=Path.Combine(serverDir,"data","login");
+        if(Directory.Exists(bundledLogin)) CopyDirectory(bundledLogin,login);
+
+        var oldPkLogin=Path.Combine(local,"Programs","Elder Souls Scape PK Training","server","data","login");
+        if(Directory.Exists(oldPkLogin)) CopyDirectory(oldPkLogin,login);
+
+        Directory.CreateDirectory(login);
+      }
     }catch(Exception ex){
-      MessageBox.Show("Persistent account storage could not be prepared.\n\n"+ex.Message,
+      MessageBox.Show("Persistent account and character storage could not be prepared.\n\n"+ex.Message,
         "Elder Souls RPG Alpha");
       throw;
     }
@@ -396,7 +413,7 @@ class Launcher {
       string clientDir=Path.Combine(root,"client");
       string logs=Path.Combine(root,"logs");
       Directory.CreateDirectory(logs);
-      EnsurePersistentWorld(serverDir);
+      EnsurePersistentData(serverDir);
 
       Process server=null;
       try{
