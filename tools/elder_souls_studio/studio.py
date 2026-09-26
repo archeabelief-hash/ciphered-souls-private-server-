@@ -13,6 +13,8 @@ from publisher import (
     restore_latest,
     next_cache_id,
     extract_model,
+    list_cache_items,
+    read_item_definition,
 )
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
@@ -180,12 +182,14 @@ class Studio(tk.Tk):
     def __init__(self):
         super().__init__()
         self.store = Store()
+        self.item_catalog = []
         self.title(f"{APP_NAME} v{VERSION}")
         self.geometry("1180x720")
         self.minsize(980, 620)
         self.current_id = None
         self._build()
         self.refresh()
+        self.after(300, self.ensure_item_catalog)
 
     def _build(self):
         toolbar = ttk.Frame(self, padding=8)
@@ -200,6 +204,8 @@ class Studio(tk.Tk):
         ttk.Button(toolbar, text="Export", command=self.export_current).pack(side="left", padx=4)
         ttk.Button(toolbar, text="Publish to 718 Cache", command=self.publish_cache).pack(side="left", padx=4)
         ttk.Button(toolbar, text="Open in Blender", command=self.open_blender).pack(side="left", padx=4)
+        ttk.Button(toolbar, text="Item Attributes", command=self.edit_item_attributes).pack(side="left", padx=4)
+        ttk.Button(toolbar, text="Colors", command=self.edit_item_colors).pack(side="left", padx=4)
         ttk.Button(toolbar, text="Extract Model", command=self.extract_model_dialog).pack(side="left", padx=4)
         ttk.Button(toolbar, text="Restore Backup", command=self.restore_backup).pack(side="left", padx=4)
         ttk.Button(toolbar, text="Install Blender Tools", command=self.install_blender_tools).pack(side="right", padx=4)
@@ -210,8 +216,35 @@ class Studio(tk.Tk):
 
         left = ttk.Frame(main, padding=6)
         main.add(left, weight=1)
-        ttk.Label(left, text="Assets", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        self.tree = ttk.Treeview(left, columns=("id","type","name"), show="headings", selectmode="browse")
+
+        browser = ttk.Notebook(left)
+        browser.pack(fill="both", expand=True)
+
+        game_tab = ttk.Frame(browser, padding=6)
+        project_tab = ttk.Frame(browser, padding=6)
+        browser.add(game_tab, text="Game Items")
+        browser.add(project_tab, text="Project Assets")
+
+        ttk.Label(game_tab, text="Search every item in the installed 718 cache", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        search_row = ttk.Frame(game_tab)
+        search_row.pack(fill="x", pady=(6,4))
+        self.item_search = tk.StringVar()
+        search_entry = ttk.Entry(search_row, textvariable=self.item_search)
+        search_entry.pack(side="left", fill="x", expand=True)
+        search_entry.bind("<KeyRelease>", lambda _e: self.filter_game_items())
+        ttk.Button(search_row, text="Refresh Index", command=lambda: self.ensure_item_catalog(True)).pack(side="left", padx=(5,0))
+
+        self.game_item_tree = ttk.Treeview(game_tab, columns=("id","name"), show="headings", selectmode="browse")
+        self.game_item_tree.heading("id", text="ID")
+        self.game_item_tree.heading("name", text="In-game name")
+        self.game_item_tree.column("id", width=72, anchor="e")
+        self.game_item_tree.column("name", width=225)
+        self.game_item_tree.pack(fill="both", expand=True, pady=4)
+        self.game_item_tree.bind("<Double-1>", lambda _e: self.open_game_item())
+        ttk.Button(game_tab, text="Open Selected Item for Editing", command=self.open_game_item).pack(fill="x", pady=(4,0))
+
+        ttk.Label(project_tab, text="Saved Elder Souls edits", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        self.tree = ttk.Treeview(project_tab, columns=("id","type","name"), show="headings", selectmode="browse")
         self.tree.heading("id", text="ID")
         self.tree.heading("type", text="Type")
         self.tree.heading("name", text="Name")
@@ -220,7 +253,7 @@ class Studio(tk.Tk):
         self.tree.column("name", width=220)
         self.tree.pack(fill="both", expand=True, pady=6)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
-        ttk.Button(left, text="Delete selected", command=self.delete_current).pack(fill="x")
+        ttk.Button(project_tab, text="Delete selected", command=self.delete_current).pack(fill="x")
 
         right = ttk.Frame(main, padding=10)
         main.add(right, weight=3)
