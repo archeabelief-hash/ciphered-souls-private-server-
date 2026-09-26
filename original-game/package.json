@@ -1,17 +1,61 @@
 {
   "name": "elder-souls-original",
   "version": "0.1.0",
+  "description": "Elder Souls - original clean-room old-school fantasy RPG",
   "private": true,
+  "main": "desktop/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "build": "vite build --base=./",
+    "preview": "vite preview --host 0.0.0.0",
+    "desktop": "npm run build && electron .",
+    "dist:win": "npm run build && electron-builder --win nsis --publish never"
   },
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "three": "^0.180.0"
   },
   "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12",
     "vite": "^7.1.7"
+  },
+  "build": {
+    "appId": "com.eldersouls.game",
+    "productName": "Elder Souls",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "Elder-Souls-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Elder Souls",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "archeabelief-hash",
+        "repo": "ciphered-souls-private-server-",
+        "releaseType": "release"
+      }
+    ]
   }
 }
