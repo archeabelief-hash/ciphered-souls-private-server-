@@ -1,0 +1,89 @@
+name: Release Original Elder Souls Windows
+
+on:
+  push:
+    branches:
+      - elder-souls-original-cleanroom
+    paths:
+      - 'original-game/**'
+      - '.github/workflows/release-original-elder-souls-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: elder-souls-original-windows-release
+  cancel-in-progress: true
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: original-game
+
+    steps:
+      - name: Check out clean-room branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set release version
+        shell: pwsh
+        run: |
+          $version = "0.1.\${{ github.run_number }}"
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          npm version $version --no-git-tag-version
+          Write-Host "Building Elder Souls $version"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build one-click Windows installer
+        run: npm run dist:win
+
+      - name: Verify updater metadata and installer
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem release -Filter 'Elder-Souls-Setup-*.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Windows installer was not produced.' }
+          if (-not (Test-Path 'release/latest.yml')) { throw 'latest.yml updater metadata was not produced.' }
+          $blockmap = Get-ChildItem release -Filter '*.blockmap' | Select-Object -First 1
+          if (-not $blockmap) { throw 'Differential update blockmap was not produced.' }
+          $hash = Get-FileHash $exe.FullName -Algorithm SHA256
+          "$($hash.Hash)  $($exe.Name)" | Set-Content release/SHA256.txt
+          Write-Host "Installer: $($exe.Name)"
+          Write-Host "SHA256: $($hash.Hash)"
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          $tag = "elder-souls-original-v$env:APP_VERSION"
+          gh release delete $tag --yes --cleanup-tag 2>$null
+          $global:LASTEXITCODE = 0
+
+          $assets = @()
+          $assets += (Get-ChildItem release -Filter 'Elder-Souls-Setup-*.exe').FullName
+          $assets += (Get-ChildItem release -Filter '*.blockmap').FullName
+          $assets += (Resolve-Path 'release/latest.yml').Path
+          $assets += (Resolve-Path 'release/SHA256.txt').Path
+
+          gh release create $tag $assets --target "$env:GITHUB_SHA" --title "Elder Souls $env:APP_VERSION" --notes "One-click Windows build of the original clean-room Elder Souls game. Installed builds check GitHub for updates every launch and automatically download/install newer releases."
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release publish failed.' }
+
+      - name: Upload CI copy
+        uses: actions/upload-artifact@v4
+        with:
+          name: elder-souls-windows-\${{ env.APP_VERSION }}
+          path: |
+            original-game/release/Elder-Souls-Setup-*.exe
+            original-game/release/latest.yml
+            original-game/release/*.blockmap
+            original-game/release/SHA256.txt
+          retention-days: 14
