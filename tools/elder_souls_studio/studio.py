@@ -6,7 +6,8 @@ import colorsys
 import shutil
 import subprocess
 import sys
-from blender_tools import open_model as open_in_blender, ensure_ob2blender
+import threading
+from blender_tools import open_model as open_in_blender, ensure_ob2blender, render_model_preview, find_blender
 import tkinter as tk
 from publisher import (
     publish as publish_to_cache,
@@ -23,12 +24,13 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
 APP_NAME = "Elder Souls Content Studio"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 USER_HOME = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ElderSoulsContentStudio"
 WORKSPACE = USER_HOME / "workspace"
 ASSETS_DIR = WORKSPACE / "assets"
 EXPORTS_DIR = WORKSPACE / "exports"
+PREVIEWS_DIR = WORKSPACE / "previews"
 SETTINGS_FILE = WORKSPACE / "settings.json"
 
 def detect_elder_souls_cache() -> str:
@@ -184,6 +186,9 @@ class Studio(tk.Tk):
         super().__init__()
         self.store = Store()
         self.item_catalog = []
+        self.preview_photo = None
+        self.preview_token = 0
+        PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
         self.title(f"{APP_NAME} v{VERSION}")
         self.geometry("1180x720")
         self.minsize(980, 620)
