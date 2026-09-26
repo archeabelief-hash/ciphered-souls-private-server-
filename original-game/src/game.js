@@ -68,39 +68,51 @@ export class ElderSoulsGame {
   }
 
   buildUI() {
-    this.root.innerHTML = `
-      <div class="game-shell">
-        <canvas class="viewport"></canvas>
-        <div class="topbar">
-          <div class="brand">ELDER SOULS</div>
-          <div class="subbrand">clean-room old-school fantasy prototype · v0.1</div>
-        </div>
-        <div class="help">LMB: move/interact · wheel: zoom · Q/E: rotate · WASD: pan camera</div>
-        <section class="panel left-panel">
-          <h2>Character</h2>
-          <div id="character"></div>
-          <h2>Skills</h2>
-          <div id="skills"></div>
-        </section>
-        <section class="panel right-panel">
-          <h2>Target</h2>
-          <div id="target"></div>
-          <h2>Inventory</h2>
-          <div id="inventory"></div>
-          <h2>Equipment</h2>
-          <div id="equipment"></div>
-        </section>
-        <div id="log" class="log"></div>
-      </div>
-    `;
+    this.root.innerHTML = [
+      '<div class="game-shell">',
+      '<canvas class="viewport"></canvas>',
+      '<div class="topbar"><div class="brand">ELDER SOULS</div><div class="subbrand">original old-school fantasy RPG</div></div>',
+      '<div class="help">LMB: move/interact · wheel: zoom · Q/E: rotate · WASD: pan camera</div>',
+      '<section class="panel left-panel">',
+      '<h2>Character</h2><div id="character"></div>',
+      '<h2>Combat Stats</h2><div id="combat-stats"></div>',
+      '<h2>Skills</h2><div id="skills"></div>',
+      '</section>',
+      '<section class="panel right-panel">',
+      '<h2>Target</h2><div id="target"></div>',
+      '<h2>Field Bag <span class="small" id="bag-count"></span></h2>',
+      '<div id="inventory" class="slot-grid bag-grid"></div>',
+      '<h2>Item</h2><div id="item-detail" class="item-detail small">Select an item to inspect it.</div>',
+      '<h2>Equipment</h2><div id="equipment" class="equipment-grid"></div>',
+      '</section>',
+      '<div id="log" class="log"></div>',
+      '<div id="bank-modal" class="bank-modal hidden">',
+      '<div class="bank-window">',
+      '<div class="bank-header"><div><div class="bank-title">VEILED VAULT</div><div class="small">Personal bank · ' + BANK_SLOTS + ' slots</div></div><button id="bank-close" class="es-button">Close</button></div>',
+      '<div class="bank-toolbar"><button id="bank-deposit-all" class="es-button">Deposit Bag</button><button id="bank-deposit-equipment" class="es-button">Deposit Equipment</button><div class="small bank-hint">Click = 1 · Shift-click = all</div></div>',
+      '<div class="bank-layout">',
+      '<div><h3>Vault</h3><div id="bank-grid" class="slot-grid bank-grid"></div></div>',
+      '<div><h3>Field Bag</h3><div id="bank-bag-grid" class="slot-grid bag-grid"></div></div>',
+      '</div></div></div></div>'
+    ].join("");
+
     this.canvas = this.root.querySelector(".viewport");
     this.ui = {
       character: this.root.querySelector("#character"),
+      combatStats: this.root.querySelector("#combat-stats"),
       skills: this.root.querySelector("#skills"),
       target: this.root.querySelector("#target"),
       inventory: this.root.querySelector("#inventory"),
+      bagCount: this.root.querySelector("#bag-count"),
+      itemDetail: this.root.querySelector("#item-detail"),
       equipment: this.root.querySelector("#equipment"),
-      log: this.root.querySelector("#log")
+      log: this.root.querySelector("#log"),
+      bankModal: this.root.querySelector("#bank-modal"),
+      bankGrid: this.root.querySelector("#bank-grid"),
+      bankBagGrid: this.root.querySelector("#bank-bag-grid"),
+      bankClose: this.root.querySelector("#bank-close"),
+      bankDepositAll: this.root.querySelector("#bank-deposit-all"),
+      bankDepositEquipment: this.root.querySelector("#bank-deposit-equipment")
     };
     this.renderUI();
   }
