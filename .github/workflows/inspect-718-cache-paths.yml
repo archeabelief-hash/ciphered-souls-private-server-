@@ -1,0 +1,35 @@
+name: Inspect 718 Cache Paths
+
+on:
+  push:
+    branches: [ elder-souls-osrs-mechanics ]
+    paths:
+      - '.github/workflows/inspect-718-cache-paths.yml'
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover sources and print cache path logic
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered/server/.git/objects/pack recovered/client/.git/objects/pack
+          git -C recovered/server init >/dev/null
+          git -C recovered/client init >/dev/null
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.pack 'https://drive.usercontent.google.com/download?id=1yao606p_04R7yXH9vsdMitsLz1t-LB79&export=download&confirm=t'
+          curl -L --fail -o recovered/server/.git/objects/pack/pack-a0e3d5d13ccfe8addde9e81f30decc1fcb0b493f.idx 'https://drive.usercontent.google.com/download?id=1z_1DeNJMqx70GNjvlnOqL3FQThDmqaC3&export=download&confirm=t'
+          curl -L --fail -o recovered/client/.git/objects/pack/pack-aba9cc70f6092791ec6dbc4d5f3539166095e495.pack 'https://drive.usercontent.google.com/download?id=1mwe-bKDWPu5NQzHr3_XDI26F9wCdSZmN&export=download&confirm=t'
+          curl -L --fail -o recovered/client/.git/objects/pack/pack-aba9cc70f6092791ec6dbc4d5f3539166095e495.idx 'https://drive.usercontent.google.com/download?id=1e1-m-k3Skp43JE25_zz1TOkPPrzM5btb&export=download&confirm=t'
+          git -C recovered/server reset --hard 61999df3c7a90e50b8ffb7000433d09d621c2ac7 >/dev/null
+          git -C recovered/client reset --hard 6fcd5e3f9e2bf360b53832090558fadb5d17ab11 >/dev/null
+
+          echo '=== CLIENT SETTINGS CACHE NAMES ==='
+          grep -nE 'CACHE|cache|ABSOL|SUB_NAME' recovered/client/src/main/java/Settings.java | head -120 || true
+          echo '=== CLIENT CACHE PATH REFERENCES ==='
+          grep -RniE 'CACHE_NAME|CACHE_SUB_NAME|ABS(O|OLOUTE)|main_file_cache.dat2|user.home|FileStore' recovered/client/src/main/java | head -240 || true
+          echo '=== SERVER CACHE STORE INIT ==='
+          grep -RniE 'new Store\(|data/cache|main_file_cache.dat2' recovered/server/src/main/java | head -160 || true
