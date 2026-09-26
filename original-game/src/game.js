@@ -1208,6 +1208,10 @@ export class ElderSoulsGame {
       pushDot(worldToTile(resource.group.position.x, resource.group.position.z), "resource", resource.name);
     }
 
+    for (const groundItem of this.groundItems) {
+      pushDot(worldToTile(groundItem.group.position.x, groundItem.group.position.z), "loot", groundItem.name);
+    }
+
     if (this.bankEntity) {
       pushDot(worldToTile(this.bankEntity.group.position.x, this.bankEntity.group.position.z), "bank", this.bankEntity.name);
     }
@@ -1300,6 +1304,19 @@ export class ElderSoulsGame {
     } else if (entity.kind === "bank") {
       this.pendingAction = null;
       this.openBank();
+    } else if (entity.kind === "groundItem") {
+      this.pendingAction = null;
+      if (entity.item.type === "currency") {
+        this.state.coins += entity.amount;
+        this.log("You pick up " + entity.amount + " " + entity.item.name + (entity.amount === 1 ? "" : "s") + ".", "good");
+        this.removeGroundItem(entity);
+      } else if (this.addItem(entity.item, entity.amount)) {
+        this.log("You pick up " + entity.amount + " × " + entity.item.name + ".", "good");
+        this.removeGroundItem(entity);
+      } else {
+        this.log("Your field bag is full.", "bad");
+      }
+      this.saveGame();
     }
   }
 
@@ -1313,6 +1330,7 @@ export class ElderSoulsGame {
     }
 
     this.updateHitsplats(dt);
+    this.updateGroundItems(dt);
 
     if (this.destinationMarker && this.destinationMarker.visible) {
       const pulse = 0.60 + Math.sin(performance.now() * 0.0065) * 0.18;
@@ -1352,6 +1370,7 @@ export class ElderSoulsGame {
       this.processActionTick();
       this.processNpcTick();
       this.processRespawns();
+      this.processGroundItemLifetimes();
     }
 
     if (this.state.tick % 10 === 0) this.saveGame();
@@ -1553,8 +1572,11 @@ export class ElderSoulsGame {
       this.addXp("bountycraft", Math.max(5, action.combatLevel * 2));
 
       const reward = 3 + action.combatLevel;
-      this.state.coins += reward;
-      this.log(action.name + " falls. You recover " + reward + " dusk marks.", "good");
+      this.spawnGroundItem(ITEMS.DUSK_MARK, reward, action.group.position.x, action.group.position.z);
+      if (Math.random() < 0.32) {
+        this.spawnGroundItem(ITEMS.RIVERFIN, 1, action.group.position.x + 0.35, action.group.position.z - 0.25);
+      }
+      this.log(action.name + " falls and leaves loot on the ground.", "good");
 
       this.pendingAction = null;
       this.selected = null;
