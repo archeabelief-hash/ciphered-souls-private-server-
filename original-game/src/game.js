@@ -163,6 +163,15 @@ export class ElderSoulsGame {
     this.scene.add(sun);
 
     this.buildGround();
+    this.destinationMarker = new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.44, 18),
+      new THREE.MeshBasicMaterial({ color: 0xe1bd70, transparent: true, opacity: 0.78, side: THREE.DoubleSide })
+    );
+    this.destinationMarker.rotation.x = -Math.PI / 2;
+    this.destinationMarker.position.y = 0.09;
+    this.destinationMarker.visible = false;
+    this.scene.add(this.destinationMarker);
+
     this.player = this.createHumanoid(0x312820, 0xb69266, 0x17120f);
     this.player.position.set(0, 0, 0);
     this.scene.add(this.player);
@@ -913,8 +922,57 @@ export class ElderSoulsGame {
     });
   }
 
+  getPlayerTile() {
+    return worldToTile(this.player.position.x, this.player.position.z);
+  }
+
+  setDestinationTile(tile, clearAction = true) {
+    const start = this.getPlayerTile();
+    const path = this.grid.findPath(start, tile);
+
+    if (!path.length && (start.x !== tile.x || start.y !== tile.y)) {
+      this.log("You cannot reach that tile.", "bad");
+      return false;
+    }
+
+    if (clearAction) this.pendingAction = null;
+    this.pathQueue = path;
+    this.currentMoveTarget = null;
+    this.destinationTile = { x: tile.x, y: tile.y };
+
+    const world = tileToWorld(tile.x, tile.y);
+    this.destinationMarker.position.set(world.x, 0.09, world.z);
+    this.destinationMarker.visible = true;
+    return true;
+  }
+
+  setDestinationForEntity(entity) {
+    const start = this.getPlayerTile();
+    const target = worldToTile(entity.group.position.x, entity.group.position.z);
+    const range = entity.kind === "bank" ? 2 : 1;
+    const path = this.grid.findAdjacentPath(start, target, range);
+
+    if (!path.length && tileDistance(start, target) > range) {
+      this.log("You cannot reach " + entity.name + ".", "bad");
+      return false;
+    }
+
+    this.pathQueue = path;
+    this.currentMoveTarget = null;
+    this.pendingAction = entity;
+
+    const finalTile = path.length ? path[path.length - 1] : start;
+    this.destinationTile = { x: finalTile.x, y: finalTile.y };
+    const world = tileToWorld(finalTile.x, finalTile.y);
+    this.destinationMarker.position.set(world.x, 0.09, world.z);
+    this.destinationMarker.visible = path.length > 0;
+
+    return true;
+  }
+
   onPointer(event) {
     if (this.bankOpen) return;
+
     const rect = this.canvas.getBoundingClientRect();
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -924,7 +982,7 @@ export class ElderSoulsGame {
     if (hits.length) {
       let obj = hits[0].object;
       while (obj && !obj.userData.entity) obj = obj.parent;
-      if (obj?.userData.entity) {
+      if (obj && obj.userData.entity) {
         this.chooseEntity(obj.userData.entity);
         return;
       }
@@ -932,27 +990,30 @@ export class ElderSoulsGame {
 
     const groundHit = this.raycaster.intersectObject(this.ground, false)[0];
     if (groundHit) {
-      this.pendingAction = null;
       this.selected = null;
-      this.playerTarget.copy(groundHit.point);
-      this.playerTarget.y = 0;
-      this.log(`Walking to ${this.playerTarget.x.toFixed(1)}, ${this.playerTarget.z.toFixed(1)}.`);
+      const tile = worldToTile(groundHit.point.x, groundHit.point.z);
+      if (this.setDestinationTile(tile, true)) {
+        this.log("Walking to tile " + tile.x + ", " + tile.y + ".");
+      }
       this.renderUI();
     }
   }
 
   chooseEntity(entity) {
     this.selected = entity;
-    const target = entity.group.position;
-    const dist = this.distance2D(this.player.position, target);
-    if (dist > 2.4) {
-      this.playerTarget.copy(target);
-      this.playerTarget.y = 0;
-      this.pendingAction = entity;
-      this.log(`Approaching ${entity.name}.`);
-    } else {
+    const start = this.getPlayerTile();
+    const target = worldToTile(entity.group.position.x, entity.group.position.z);
+    const range = entity.kind === "bank" ? 2 : 1;
+
+    if (tileDistance(start, target) <= range) {
+      this.pathQueue = [];
+      this.currentMoveTarget = null;
+      this.destinationMarker.visible = false;
       this.beginInteraction(entity);
+    } else if (this.setDestinationForEntity(entity)) {
+      this.log("Approaching " + entity.name + ".");
     }
+
     this.renderUI();
   }
 
@@ -1004,6 +1065,17 @@ export class ElderSoulsGame {
   tick() {
     this.state.tick++;
 
+    const moving = this.pathQueue.length > 0 || !!this.currentMoveTarget;
+    if (this.runMode && moving) {
+      this.runEnergy = Math.max(0, this.runEnergy - 1.25);
+      if (this.runEnergy <= 0) {
+        this.runMode = false;
+        this.log("Your run energy is depleted.");
+      }
+    } else {
+      this.runEnergy = Math.min(100, this.runEnergy + 0.55);
+    }
+
     if (!this.bankOpen) {
       this.processActionTick();
       this.processNpcTick();
@@ -1015,40 +1087,75 @@ export class ElderSoulsGame {
   }
 
   updatePlayer(dt) {
-    const delta = this.playerTarget.clone().sub(this.player.position);
-    delta.y = 0;
-    const dist = delta.length();
     const visuals = this.player.userData.visuals;
 
-    if (dist > 0.08) {
-      const step = Math.min(dist, 4.0 * dt);
-      delta.normalize();
-      this.player.position.addScaledVector(delta, step);
-      this.player.rotation.y = Math.atan2(delta.x, delta.z);
+    if (!this.currentMoveTarget && this.pathQueue.length) {
+      const next = this.pathQueue.shift();
+      const world = tileToWorld(next.x, next.y);
+      this.currentMoveTarget = new THREE.Vector3(world.x, 0, world.z);
+    }
 
-      if (visuals) {
-        const swing = Math.sin(performance.now() * 0.0125) * 0.48;
+    let moving = false;
+
+    if (this.currentMoveTarget) {
+      const delta = this.currentMoveTarget.clone().sub(this.player.position);
+      delta.y = 0;
+      const dist = delta.length();
+
+      if (dist <= 0.035) {
+        this.player.position.copy(this.currentMoveTarget);
+        this.currentMoveTarget = null;
+
+        if (!this.pathQueue.length) {
+          this.destinationMarker.visible = false;
+          if (this.pendingAction) {
+            const entity = this.pendingAction;
+            const playerTile = this.getPlayerTile();
+            const targetTile = worldToTile(entity.group.position.x, entity.group.position.z);
+            const range = entity.kind === "bank" ? 2 : 1;
+            if (tileDistance(playerTile, targetTile) <= range) {
+              this.beginInteraction(entity);
+            }
+          }
+        }
+      } else {
+        moving = true;
+        const tilesPerSecond = this.runMode && this.runEnergy > 0 ? (2 / 0.6) : (1 / 0.6);
+        const step = Math.min(dist, tilesPerSecond * dt);
+        delta.normalize();
+        this.player.position.addScaledVector(delta, step);
+        this.player.rotation.y = Math.atan2(delta.x, delta.z);
+      }
+    }
+
+    if (this.attackAnim > 0) {
+      this.attackAnim = Math.max(0, this.attackAnim - dt);
+    }
+
+    if (visuals) {
+      if (moving) {
+        this.moveCycle += dt * (this.runMode ? 15.5 : 9.4);
+        const amplitude = this.runMode ? 0.70 : 0.50;
+        const swing = Math.sin(this.moveCycle) * amplitude;
         visuals.leftArmPivot.rotation.x = swing;
         visuals.rightArmPivot.rotation.x = -swing;
-        visuals.leftLegPivot.rotation.x = -swing * 0.72;
-        visuals.rightLegPivot.rotation.x = swing * 0.72;
-        visuals.body.position.y = Math.abs(Math.sin(performance.now() * 0.0125)) * 0.035;
-      }
-    } else {
-      if (visuals) {
-        const settle = Math.min(1, dt * 10);
+        visuals.leftLegPivot.rotation.x = -swing * 0.78;
+        visuals.rightLegPivot.rotation.x = swing * 0.78;
+        visuals.body.position.y = Math.abs(Math.sin(this.moveCycle * 2)) * (this.runMode ? 0.055 : 0.032);
+      } else if (this.attackAnim > 0) {
+        const phase = 1 - this.attackAnim / 0.34;
+        const swing = Math.sin(Math.min(1, phase) * Math.PI) * 1.28;
+        visuals.rightArmPivot.rotation.x = -swing;
+        visuals.rightArmPivot.rotation.z = -0.18;
+        visuals.leftArmPivot.rotation.x *= 0.8;
+      } else {
+        const settle = Math.min(1, dt * 11);
         visuals.leftArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.leftArmPivot.rotation.x, 0, settle);
         visuals.rightArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.rightArmPivot.rotation.x, 0, settle);
+        visuals.rightArmPivot.rotation.z = THREE.MathUtils.lerp(visuals.rightArmPivot.rotation.z, 0, settle);
         visuals.leftLegPivot.rotation.x = THREE.MathUtils.lerp(visuals.leftLegPivot.rotation.x, 0, settle);
         visuals.rightLegPivot.rotation.x = THREE.MathUtils.lerp(visuals.rightLegPivot.rotation.x, 0, settle);
         visuals.body.position.y = THREE.MathUtils.lerp(visuals.body.position.y, 0, settle);
-      }
-
-      if (this.pendingAction) {
-        const target = this.pendingAction.group.position;
-        if (this.distance2D(this.player.position, target) <= 2.5) {
-          this.beginInteraction(this.pendingAction);
-        }
       }
     }
   }
