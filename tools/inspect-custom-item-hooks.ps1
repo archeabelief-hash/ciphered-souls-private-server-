@@ -39,3 +39,46 @@ $pp='recovered/server/src/main/java/com/rs/game/player/Player.java'
 $pl=Get-Content $pp
 $match=Select-String -Path $pp -Pattern 'public void start\(\)' | Select-Object -First 1
 if($match){$s=[Math]::Max(0,$match.LineNumber-5);$pl | Select-Object -Skip $s -First 90}
+
+"=== AGENT GATEWAY HOOKS ==="
+$serverFiles = Get-ChildItem recovered/server/src/main/java -Recurse -Filter *.java
+foreach($p in @(
+  'new PlayerCombat\(',
+  'addWalkSteps\(',
+  'Equipment\.sendWear',
+  'sendWear\(',
+  'getInventory\(\)\.getItems',
+  'getEquipment\(\)\.getItems',
+  'World\.getNPCs\(',
+  'getHitpoints\(\)',
+  'getSkills\(\)\.getLevel',
+  'getX\(\)',
+  'getY\(\)',
+  'getPlane\(\)',
+  'getUsername\(\)',
+  'getPlayers\(',
+  'getActionManager\(\)\.setAction',
+  'InventoryOptionsHandler',
+  'PlayerCombat'
+)) {
+  "--- $p ---"
+  $serverFiles | Select-String -Pattern $p | Select-Object -First 80 | ForEach-Object { "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
+}
+"=== WORLD HEAD ==="
+$wf=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter World.java | Select-Object -First 1).FullName
+if($wf){Get-Content $wf | Select-Object -First 260}
+"=== EQUIPMENT HEAD ==="
+$ef=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Equipment.java | Select-Object -First 1).FullName
+if($ef){Get-Content $ef | Select-Object -First 360}
+"=== PLAYERCOMBAT HEAD ==="
+$pc=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter PlayerCombat.java | Select-Object -First 1).FullName
+if($pc){Get-Content $pc | Select-Object -First 260}
+"=== INVENTORY HEAD ==="
+$inv=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter Inventory.java | Select-Object -First 1).FullName
+if($inv){Get-Content $inv | Select-Object -First 360}
+"=== ACTION MANAGER HEAD ==="
+$am=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter ActionManager.java | Select-Object -First 1).FullName
+if($am){Get-Content $am | Select-Object -First 260}
+"=== NPC HEAD ==="
+$nf=(Get-ChildItem recovered/server/src/main/java -Recurse -Filter NPC.java | Select-Object -First 1).FullName
+if($nf){Get-Content $nf | Select-Object -First 260}
