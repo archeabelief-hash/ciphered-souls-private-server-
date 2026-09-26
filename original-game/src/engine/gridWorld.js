@@ -153,6 +153,10 @@ export class GridWorld {
   }
 
   findAdjacentPath(start, target, range = 1) {
+    if (range <= 0) {
+      return this.findPath(start, target);
+    }
+
     const candidates = [];
 
     for (let ox = -range; ox <= range; ox++) {
