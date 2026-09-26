@@ -207,7 +207,7 @@ $iss=@'
 [Setup]
 AppId={{95B573C7-A2E0-4DD7-952D-C71871871847}
 AppName=Elder Souls Scape PK Training
-AppVersion=0.3.0
+AppVersion=0.4.0
 AppPublisher=Elder Souls Scape
 DefaultDirName={localappdata}\Programs\Elder Souls Scape PK Training
 DefaultGroupName=Elder Souls Scape PK Training
@@ -236,12 +236,12 @@ Set-Content installer.iss $iss
 if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
 Get-FileHash output/Elder-Souls-Scape-PK-Training-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
 
-Write-Host '=== Publish private v0.2 release ==='
+Write-Host '=== Publish public v0.4 release ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-scape-pk-training-v0.3.0'
+$tag='elder-souls-scape-pk-training-v0.4.0'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-Scape-PK-Training-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls Scape PK Training v0.3.0 - Duat Prototype' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
+gh release create $tag 'output/Elder-Souls-Scape-PK-Training-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls Scape PK Training v0.4.0 - Local Controller Gateway' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
 Write-Host 'BUILD COMPLETE: output/Elder-Souls-Scape-PK-Training-Setup.exe'
