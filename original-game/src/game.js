@@ -683,10 +683,306 @@ export class ElderSoulsGame {
     }
   }
 
+  selectBagItem(index) {
+    const item = this.inventory[index];
+    this.selectedItem = item ? { source: "bag", index, item } : null;
+    this.renderItemDetail();
+  }
+
+  selectEquipmentItem(slot) {
+    const item = this.equipment[slot];
+    this.selectedItem = item ? { source: "equipment", slot, item } : null;
+    this.renderItemDetail();
+  }
+
+  quickUseBagItem(index) {
+    const item = this.inventory[index];
+    if (!item) return;
+    if (item.equipSlot) {
+      this.equipFromInventory(index);
+      return;
+    }
+    if (item.type === "food") this.consumeFood(index);
+  }
+
+  handleItemAction(action) {
+    if (!this.selectedItem) return;
+    const selected = this.selectedItem;
+
+    if (action === "equip" && selected.source === "bag") {
+      this.equipFromInventory(selected.index);
+      return;
+    }
+    if (action === "consume" && selected.source === "bag") {
+      this.consumeFood(selected.index);
+      return;
+    }
+    if (action === "unequip" && selected.source === "equipment") {
+      this.unequip(selected.slot);
+      return;
+    }
+    if (action === "examine") {
+      this.log(selected.item.examine || "You find nothing unusual.");
+    }
+  }
+
+  equipFromInventory(index) {
+    const item = this.inventory[index];
+    if (!item || !item.equipSlot) return;
+
+    const slot = item.equipSlot;
+    const previous = this.equipment[slot];
+
+    this.equipment[slot] = item;
+    this.inventory[index] = previous || null;
+    this.selectedItem = { source: "equipment", slot, item };
+
+    this.log("You equip the " + item.name + ".", "good");
+    this.saveGame();
+    this.renderUI();
+  }
+
+  unequip(slot) {
+    const item = this.equipment[slot];
+    if (!item) return;
+
+    const free = this.findFreeInventorySlot();
+    if (free < 0) {
+      this.log("Your field bag is full.", "bad");
+      return;
+    }
+
+    this.inventory[free] = item;
+    this.equipment[slot] = null;
+    this.selectedItem = { source: "bag", index: free, item };
+
+    this.log("You remove the " + item.name + ".");
+    this.saveGame();
+    this.renderUI();
+  }
+
+  consumeFood(index) {
+    const item = this.inventory[index];
+    if (!item || item.type !== "food") return;
+
+    const before = this.hp;
+    this.hp = Math.min(this.getDisplayedMaxHp(), this.hp + Number(item.heal || 0));
+    this.removeInventoryAmount(index, 1);
+
+    this.log("You consume the " + item.name + " and restore " + (this.hp - before) + " vitality.", "good");
+    this.selectedItem = null;
+    this.saveGame();
+    this.renderUI();
+  }
+
+  getEquipmentStats() {
+    const totals = {
+      accuracy: 0,
+      power: 0,
+      armor: 0,
+      heka: 0,
+      marksmanship: 0,
+      reverence: 0,
+      vitality: 0,
+      ward: 0
+    };
+
+    for (const item of Object.values(this.equipment)) {
+      if (!item || !item.stats) continue;
+      for (const [key, value] of Object.entries(item.stats)) {
+        totals[key] = (totals[key] || 0) + Number(value || 0);
+      }
+    }
+    return totals;
+  }
+
+  getDisplayedMaxHp() {
+    return this.maxHp + Number(this.getEquipmentStats().vitality || 0);
+  }
+
+  getCombatRating() {
+    const totals = this.getEquipmentStats();
+    const levelTotal =
+      this.skills.bladework.level +
+      this.skills.force.level +
+      this.skills.ward.level +
+      this.skills.vitality.level +
+      this.skills.marksmanship.level +
+      this.skills.heka.level;
+
+    const gear =
+      totals.accuracy +
+      totals.power +
+      totals.armor +
+      totals.heka +
+      totals.marksmanship +
+      totals.ward;
+
+    return Math.max(1, Math.floor(levelTotal / 6 + gear / 12));
+  }
+
+  openBank() {
+    this.bankOpen = true;
+    this.ui.bankModal.classList.remove("hidden");
+    this.log("You open your Veiled Vault.", "good");
+    this.renderBank();
+  }
+
+  closeBank() {
+    this.bankOpen = false;
+    this.ui.bankModal.classList.add("hidden");
+    this.saveGame();
+  }
+
+  depositBagSlot(index, all = false) {
+    const item = this.inventory[index];
+    if (!item) return;
+
+    const amount = all ? item.amount : 1;
+    if (!this.addBankItem(item, amount)) {
+      this.log("Your vault is full.", "bad");
+      return;
+    }
+
+    this.removeInventoryAmount(index, amount);
+    this.selectedItem = null;
+    this.saveGame();
+    this.renderUI();
+    this.renderBank();
+  }
+
+  withdrawBankItem(index, all = false) {
+    const item = this.bank[index];
+    if (!item) return;
+
+    const amount = all ? item.amount : 1;
+    let moved = 0;
+
+    if (item.stackable) {
+      if (this.addItem(item, amount)) moved = amount;
+    } else {
+      for (let i = 0; i < amount; i++) {
+        if (!this.addItem(item, 1)) break;
+        moved++;
+      }
+    }
+
+    if (moved <= 0) {
+      this.log("Your field bag is full.", "bad");
+      return;
+    }
+
+    this.removeBankAmount(index, moved);
+    this.saveGame();
+    this.renderUI();
+    this.renderBank();
+  }
+
+  depositBag() {
+    for (let index = 0; index < this.inventory.length; index++) {
+      const item = this.inventory[index];
+      if (!item) continue;
+      const amount = item.amount;
+      if (this.addBankItem(item, amount)) this.inventory[index] = null;
+    }
+
+    this.selectedItem = null;
+    this.log("You deposit your field bag.", "good");
+    this.saveGame();
+    this.renderUI();
+    this.renderBank();
+  }
+
+  depositEquipment() {
+    for (const slot of EQUIPMENT_SLOTS) {
+      const item = this.equipment[slot];
+      if (!item) continue;
+      if (this.addBankItem(item, item.amount || 1)) this.equipment[slot] = null;
+    }
+
+    this.selectedItem = null;
+    this.log("You deposit your equipped items.", "good");
+    this.saveGame();
+    this.renderUI();
+    this.renderBank();
+  }
+
+  addBankItem(base, amount) {
+    const template = ITEM_BY_ID[base.id] || base;
+
+    if (template.stackable) {
+      const existing = this.bank.find((item) => item && item.id === template.id);
+      if (existing) {
+        existing.amount += amount;
+        return true;
+      }
+
+      const free = this.findFreeBankSlot();
+      if (free < 0) return false;
+      this.bank[free] = cloneItem(template, amount);
+      return true;
+    }
+
+    const freeSlots = [];
+    for (let i = 0; i < this.bank.length && freeSlots.length < amount; i++) {
+      if (!this.bank[i]) freeSlots.push(i);
+    }
+    if (freeSlots.length < amount) return false;
+
+    freeSlots.forEach((slot) => {
+      this.bank[slot] = cloneItem(template, 1);
+    });
+    return true;
+  }
+
   addItem(base, amount) {
-    const existing = this.inventory.find((i) => i.id === base.id);
-    if (existing) existing.amount += amount;
-    else this.inventory.push({ ...base, amount });
+    const template = ITEM_BY_ID[base.id] || base;
+
+    if (template.stackable) {
+      const existing = this.inventory.find((item) => item && item.id === template.id);
+      if (existing) {
+        existing.amount += amount;
+        return true;
+      }
+
+      const free = this.findFreeInventorySlot();
+      if (free < 0) return false;
+      this.inventory[free] = cloneItem(template, amount);
+      return true;
+    }
+
+    const freeSlots = [];
+    for (let i = 0; i < this.inventory.length && freeSlots.length < amount; i++) {
+      if (!this.inventory[i]) freeSlots.push(i);
+    }
+    if (freeSlots.length < amount) return false;
+
+    freeSlots.forEach((slot) => {
+      this.inventory[slot] = cloneItem(template, 1);
+    });
+    return true;
+  }
+
+  removeInventoryAmount(index, amount) {
+    const item = this.inventory[index];
+    if (!item) return;
+    if (item.amount > amount) item.amount -= amount;
+    else this.inventory[index] = null;
+  }
+
+  removeBankAmount(index, amount) {
+    const item = this.bank[index];
+    if (!item) return;
+    if (item.amount > amount) item.amount -= amount;
+    else this.bank[index] = null;
+  }
+
+  findFreeInventorySlot() {
+    return this.inventory.findIndex((item) => !item);
+  }
+
+  findFreeBankSlot() {
+    return this.bank.findIndex((item) => !item);
   }
 
   addXp(skillId, amount) {
