@@ -508,6 +508,10 @@ export class ElderSoulsGame {
       this.hp = this.maxHp;
       this.addXp("reverence", 10);
       this.log("The Veiled Shrine restores your vitality.", "good");
+      this.saveGame();
+    } else if (entity.kind === "bank") {
+      this.pendingAction = null;
+      this.openBank();
     }
   }
 
