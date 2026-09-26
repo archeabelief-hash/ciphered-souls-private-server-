@@ -515,10 +515,13 @@ export class ElderSoulsGame {
     }
   }
 
-  frame(now) {
+  frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
-    this.updatePlayer(dt);
-    this.updateCamera(false, dt);
+
+    if (!this.bankOpen) {
+      this.updatePlayer(dt);
+      this.updateCamera(false, dt);
+    }
 
     this.tickAccumulator += dt * 1000;
     while (this.tickAccumulator >= TICK_MS) {
@@ -527,14 +530,19 @@ export class ElderSoulsGame {
     }
 
     this.renderer.render(this.scene, this.camera);
-    requestAnimationFrame((t) => this.frame(t));
+    requestAnimationFrame(() => this.frame());
   }
 
   tick() {
     this.state.tick++;
-    this.processActionTick();
-    this.processNpcTick();
-    this.processRespawns();
+
+    if (!this.bankOpen) {
+      this.processActionTick();
+      this.processNpcTick();
+      this.processRespawns();
+    }
+
+    if (this.state.tick % 10 === 0) this.saveGame();
     this.renderUI();
   }
 
