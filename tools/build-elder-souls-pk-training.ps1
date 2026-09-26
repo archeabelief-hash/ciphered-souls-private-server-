@@ -20,7 +20,7 @@ git -C recovered/client reset --hard 6fcd5e3f9e2bf360b53832090558fadb5d17ab11
 Write-Host '=== Patch localhost/private operation ==='
 $sp = 'recovered/server/src/main/java/com/rs/Settings.java'
 $s = Get-Content $sp -Raw
-$s = $s.Replace('public static final String SERVER_NAME = "Matrix";', 'public static final String SERVER_NAME = "Elder Souls Scape PK Training";')
+$s = $s.Replace('public static final String SERVER_NAME = "Matrix";', 'public static final String SERVER_NAME = "Elder Souls RPG Alpha";')
 $s = [regex]::Replace($s, 'private static final String LIVE_IP = "[^"]*";[^\r\n]*', 'private static final String LIVE_IP = "127.0.0.1"; // local-only')
 $s = $s.Replace('new InetSocketAddress("0.0.0.0", 43593)', 'new InetSocketAddress("127.0.0.1", 43593)')
 $s = $s.Replace('new InetSocketAddress("0.0.0.0", 43599)', 'new InetSocketAddress("127.0.0.1", 43599)')
@@ -44,22 +44,22 @@ Set-Content $ll $l -NoNewline
 
 $cp = 'recovered/client/src/main/java/Settings.java'
 $c = Get-Content $cp -Raw
-$c = [regex]::Replace($c, 'public static String local = //[\s\S]*?//"127\.0\.0\.1"; // local', 'public static String local = "127.0.0.1"; // local-only Elder Souls Scape PK Training', 1)
-$c = $c.Replace('public static final Object ABSOLOUTE_CACHE_NAME_1 = "MATRIX";', 'public static final Object ABSOLOUTE_CACHE_NAME_1 = "ELDER_SOULS_SCAPE_PK_TRAINING";')
+$c = [regex]::Replace($c, 'public static String local = //[\s\S]*?//"127\.0\.0\.1"; // local', 'public static String local = "127.0.0.1"; // local-only Elder Souls RPG Alpha', 1)
+$c = $c.Replace('public static final Object ABSOLOUTE_CACHE_NAME_1 = "MATRIX";', 'public static final Object ABSOLOUTE_CACHE_NAME_1 = "ELDER_SOULS_RPG_ALPHA";')
 $c = $c.Replace('public static final String ABSOLOUTE_CACHE_NAME_2 = "RSPS";', 'public static final String ABSOLOUTE_CACHE_NAME_2 = "718";')
-$c = $c.Replace('public static final Object CACHE_NAME = "MATRIX";', 'public static final Object CACHE_NAME = "ELDER_SOULS_SCAPE_PK_TRAINING";')
+$c = $c.Replace('public static final Object CACHE_NAME = "MATRIX";', 'public static final Object CACHE_NAME = "ELDER_SOULS_RPG_ALPHA";')
 $c = $c.Replace('public static final String CACHE_SUB_NAME = "MATRIX";', 'public static final String CACHE_SUB_NAME = "718";')
 Set-Content $cp $c -NoNewline
 
 $loader = 'recovered/client/src/main/java/Loader.java'
 $x = Get-Content $loader -Raw
-$x = $x.Replace('Matrix RSPS', 'Elder Souls Scape PK Training')
+$x = $x.Replace('Matrix RSPS', 'Elder Souls RPG Alpha')
 $x = [regex]::Replace($x, '(?m)^\s*Discord\.init\(\);\s*$', '        // Discord integration disabled for local build.')
 Set-Content $loader $x -NoNewline
 
 $rl = 'recovered/client/src/main/java/net/runelite/client/RuneLite.java'
 $r = Get-Content $rl -Raw
-$r = $r.Replace('new File(System.getProperty("user.home"), "MATRIX")', 'new File(System.getProperty("user.home"), "ElderSoulsScapePKTraining")')
+$r = $r.Replace('new File(System.getProperty("user.home"), "MATRIX")', 'new File(System.getProperty("user.home"), "ElderSoulsRPGAlpha")')
 Set-Content $rl $r -NoNewline
 
 Write-Host '=== Apply PK Training Arena gameplay patch ==='
@@ -67,6 +67,9 @@ Write-Host '=== Apply PK Training Arena gameplay patch ==='
 
 Write-Host '=== Apply local controller gateway patch ==='
 ./tools/apply-elder-souls-agent-gateway.ps1
+
+Write-Host '=== Normalize Elder Souls RPG Alpha branding and paths ==='
+./tools/apply-elder-souls-rpg-alpha-branding.ps1
 
 Write-Host '=== Download build dependencies ==='
 New-Item -ItemType Directory -Force deps | Out-Null
@@ -97,16 +100,16 @@ if($LASTEXITCODE -ne 0){throw 'Server compile failed'}
 Get-ChildItem recovered/client/src/main/java -Recurse -Filter *.java | ForEach-Object FullName | Set-Content build/client-sources.txt
 & javac -source 8 -target 8 -encoding UTF-8 -cp 'recovered/client/lib/*;deps/*' -processorpath 'deps/lombok-1.18.30.jar' -d build/client-classes '@build/client-sources.txt'
 if($LASTEXITCODE -ne 0){throw 'Client compile failed'}
-& jar --create --file build/elder-souls-scape-pk-training-server.jar --main-class com.rs.GameLauncher -C build/server-classes .
-& jar --create --file build/elder-souls-scape-pk-training-client.jar --main-class Loader -C build/client-classes .
-if(Test-Path recovered/server/src/main/resources){& jar --update --file build/elder-souls-scape-pk-training-server.jar -C recovered/server/src/main/resources .}
-if(Test-Path recovered/client/src/main/resources){& jar --update --file build/elder-souls-scape-pk-training-client.jar -C recovered/client/src/main/resources .}
+& jar --create --file build/elder-souls-rpg-alpha-server.jar --main-class com.rs.GameLauncher -C build/server-classes .
+& jar --create --file build/elder-souls-rpg-alpha-client.jar --main-class Loader -C build/client-classes .
+if(Test-Path recovered/server/src/main/resources){& jar --update --file build/elder-souls-rpg-alpha-server.jar -C recovered/server/src/main/resources .}
+if(Test-Path recovered/client/src/main/resources){& jar --update --file build/elder-souls-rpg-alpha-client.jar -C recovered/client/src/main/resources .}
 
 Write-Host '=== Assemble app and full cache ==='
-$root='dist/Elder Souls Scape PK Training 718'
+$root='dist/Elder Souls RPG Alpha 718'
 New-Item -ItemType Directory -Force "$root/server/data/cache","$root/server/lib","$root/client/lib","$root/logs","$root/agent" | Out-Null
-Copy-Item build/elder-souls-scape-pk-training-server.jar "$root/server/"
-Copy-Item build/elder-souls-scape-pk-training-client.jar "$root/client/"
+Copy-Item build/elder-souls-rpg-alpha-server.jar "$root/server/"
+Copy-Item build/elder-souls-rpg-alpha-client.jar "$root/client/"
 Copy-Item recovered/server/data/* "$root/server/data/" -Recurse -Force
 if(Test-Path "$root/server/data/cache"){Remove-Item "$root/server/data/cache" -Recurse -Force}
 New-Item -ItemType Directory -Force "$root/server/data/cache" | Out-Null
@@ -166,13 +169,13 @@ class Launcher {
     for(int i=0;i<180;i++){ if(server.HasExited)return false; try{using(var c=new TcpClient()){var a=c.BeginConnect("127.0.0.1",port,null,null); if(a.AsyncWaitHandle.WaitOne(500)){c.EndConnect(a);return true;}}}catch{} Thread.Sleep(500);} return false;
   }
   [STAThread] static void Main(){
-    bool created; using(var m=new Mutex(true,"ElderSoulsScapePKTrainingLocalLauncher",out created)){ if(!created){MessageBox.Show("Elder Souls Scape PK Training is already running.");return;}
+    bool created; using(var m=new Mutex(true,"ElderSoulsRPGAlphaLocalLauncher",out created)){ if(!created){MessageBox.Show("Elder Souls RPG Alpha is already running.");return;}
       string root=AppContext.BaseDirectory; string java=Path.Combine(root,"runtime","bin","java.exe"); string serverDir=Path.Combine(root,"server"); string clientDir=Path.Combine(root,"client"); string logs=Path.Combine(root,"logs"); Directory.CreateDirectory(logs);
       Process server=null; try{
-        server=StartJava(java,"-Xms512m -Xmx2048m -cp \"elder-souls-scape-pk-training-server.jar;lib/*\" com.rs.GameLauncher 1 false false false",serverDir,Path.Combine(logs,"server.log"),true);
-        if(!WaitPort(43594,server)){MessageBox.Show("The local server did not finish starting. Open logs\\server.log for the exact error.","Elder Souls Scape PK Training");return;}
-        var client=StartJava(java,"-Xmx1536m -cp \"elder-souls-scape-pk-training-client.jar;lib/*\" Loader",clientDir,Path.Combine(logs,"client.log"),false); client.WaitForExit();
-      } catch(Exception ex){MessageBox.Show(ex.ToString(),"Elder Souls Scape PK Training startup error");}
+        server=StartJava(java,"-Xms512m -Xmx2048m -cp \"elder-souls-rpg-alpha-server.jar;lib/*\" com.rs.GameLauncher 1 false false false",serverDir,Path.Combine(logs,"server.log"),true);
+        if(!WaitPort(43594,server)){MessageBox.Show("The local server did not finish starting. Open logs\\server.log for the exact error.","Elder Souls RPG Alpha");return;}
+        var client=StartJava(java,"-Xmx1536m -cp \"elder-souls-rpg-alpha-client.jar;lib/*\" Loader",clientDir,Path.Combine(logs,"client.log"),false); client.WaitForExit();
+      } catch(Exception ex){MessageBox.Show(ex.ToString(),"Elder Souls RPG Alpha startup error");}
       finally{ if(server!=null && !server.HasExited){try{server.StandardInput.WriteLine("shutdown");server.StandardInput.Flush();if(!server.WaitForExit(15000))server.Kill();}catch{try{server.Kill();}catch{}}} }
     }
   }
@@ -180,13 +183,13 @@ class Launcher {
 '@
 Set-Content launcher.cs $src
 $csc=(Get-ChildItem 'C:\Windows\Microsoft.NET\Framework64' -Recurse -Filter csc.exe | Sort-Object FullName -Descending | Select-Object -First 1).FullName
-& $csc /nologo /target:winexe /optimize+ /reference:System.Windows.Forms.dll /out:"$root/Elder Souls Scape PK Training.exe" launcher.cs
+& $csc /nologo /target:winexe /optimize+ /reference:System.Windows.Forms.dll /out:"$root/Elder Souls RPG Alpha.exe" launcher.cs
 if($LASTEXITCODE -ne 0){throw 'Launcher compile failed'}
 
 @'
 ELDER SOULS SCAPE — PK TRAINING
 
-Launch: double-click "Elder Souls Scape PK Training.exe".
+Launch: double-click "Elder Souls RPG Alpha.exe".
 The game and server run locally on this PC. The PK Training Arena starts in the Mage Arena bank area and reuses the existing Edgeville shop NPC lineup for training supplies.
 The Grand Exchange acts as an instant training exchange with effectively unlimited supply/demand at High Alchemy value.\n\nDUAT GUARDIAN PROTOTYPE\nCustom IDs 29990-29997 are level-1 test equipment. Every account receives one set in inventory and one backup set in bank. The Duat Khopesh is intentionally one-hit lethal in this engineering build.
 
@@ -194,7 +197,7 @@ If startup fails, check logs\server.log and logs\client.log.
 '@ | Set-Content "$root/README.txt"
 
 Write-Host '=== Smoke-test actual local server ==='
-$p=Start-Process -FilePath "$root/runtime/bin/java.exe" -ArgumentList '-Xms256m','-Xmx1024m','-cp','elder-souls-scape-pk-training-server.jar;lib/*','com.rs.GameLauncher','1','false','false','false' -WorkingDirectory "$root/server" -PassThru -RedirectStandardOutput "$root/logs/smoke-server.log" -RedirectStandardError "$root/logs/smoke-server-error.log"
+$p=Start-Process -FilePath "$root/runtime/bin/java.exe" -ArgumentList '-Xms256m','-Xmx1024m','-cp','elder-souls-rpg-alpha-server.jar;lib/*','com.rs.GameLauncher','1','false','false','false' -WorkingDirectory "$root/server" -PassThru -RedirectStandardOutput "$root/logs/smoke-server.log" -RedirectStandardError "$root/logs/smoke-server-error.log"
 $ok=$false
 for($i=0;$i -lt 120;$i++){if($p.HasExited){break};try{$tc=New-Object Net.Sockets.TcpClient;$tc.Connect('127.0.0.1',43594);$tc.Close();$ok=$true;break}catch{};Start-Sleep -Milliseconds 500}
 $gatewayOk=$false
@@ -221,42 +224,42 @@ choco install innosetup -y --no-progress
 $iss=@'
 [Setup]
 AppId={{95B573C7-A2E0-4DD7-952D-C71871871847}
-AppName=Elder Souls Scape PK Training
+AppName=Elder Souls RPG Alpha
 AppVersion=0.4.0
 AppPublisher=Elder Souls Scape
-DefaultDirName={localappdata}\Programs\Elder Souls Scape PK Training
-DefaultGroupName=Elder Souls Scape PK Training
+DefaultDirName={localappdata}\Programs\Elder Souls RPG Alpha
+DefaultGroupName=Elder Souls RPG Alpha
 OutputDir=output
-OutputBaseFilename=Elder-Souls-Scape-PK-Training-Setup
+OutputBaseFilename=Elder-Souls-RPG-Alpha-Setup
 Compression=lzma2/max
 SolidCompression=yes
 PrivilegesRequired=lowest
 WizardStyle=modern
-UninstallDisplayName=Elder Souls Scape PK Training
+UninstallDisplayName=Elder Souls RPG Alpha
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Files]
-Source: "dist\Elder Souls Scape PK Training 718\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\Elder Souls RPG Alpha 718\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Elder Souls Scape PK Training"; Filename: "{app}\Elder Souls Scape PK Training.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\Elder Souls Scape PK Training"; Filename: "{app}\Elder Souls Scape PK Training.exe"; WorkingDir: "{app}"
+Name: "{group}\Elder Souls RPG Alpha"; Filename: "{app}\Elder Souls RPG Alpha.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\Elder Souls RPG Alpha"; Filename: "{app}\Elder Souls RPG Alpha.exe"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\Elder Souls Scape PK Training.exe"; Description: "Launch Elder Souls Scape PK Training"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Elder Souls RPG Alpha.exe"; Description: "Launch Elder Souls RPG Alpha"; Flags: nowait postinstall skipifsilent
 '@
 Set-Content installer.iss $iss
 & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' installer.iss
 if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
-Get-FileHash output/Elder-Souls-Scape-PK-Training-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
+Get-FileHash output/Elder-Souls-RPG-Alpha-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
 
 Write-Host '=== Publish public v0.4 release ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-scape-pk-training-v0.4.0'
+$tag='elder-souls-rpg-alpha-v0.4.0'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-Scape-PK-Training-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls Scape PK Training v0.4.0 - Local Controller Gateway' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
+gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha v0.4.0 - Local Controller Gateway' --notes 'Standalone Elder Souls test build. Adds the level-1 Duat Guardian prototype equipment set, custom item IDs 29990-29997, a deliberately one-hit-lethal Duat Khopesh for engineering tests, automatic inventory/bank test kits, the PK Training Arena, bundled Java runtime, and full cache. Prototype visuals temporarily reuse compatible 718 geometry while the original-mesh pipeline is developed.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
-Write-Host 'BUILD COMPLETE: output/Elder-Souls-Scape-PK-Training-Setup.exe'
+Write-Host 'BUILD COMPLETE: output/Elder-Souls-RPG-Alpha-Setup.exe'
