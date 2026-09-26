@@ -35,7 +35,7 @@ jobs:
       - name: Set release version
         shell: pwsh
         run: |
-          $version = "0.1.\${{ github.run_number }}"
+          $version = "0.1.${{ github.run_number }}"
           "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           npm version $version --no-git-tag-version
           Write-Host "Building Elder Souls $version"
@@ -62,7 +62,7 @@ jobs:
       - name: Publish GitHub release
         shell: pwsh
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "elder-souls-original-v$env:APP_VERSION"
           gh release delete $tag --yes --cleanup-tag 2>$null
@@ -80,7 +80,7 @@ jobs:
       - name: Upload CI copy
         uses: actions/upload-artifact@v4
         with:
-          name: elder-souls-windows-\${{ env.APP_VERSION }}
+          name: elder-souls-windows-${{ env.APP_VERSION }}
           path: |
             original-game/release/Elder-Souls-Setup-*.exe
             original-game/release/latest.yml
