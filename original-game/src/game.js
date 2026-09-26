@@ -30,6 +30,7 @@ export class ElderSoulsGame {
     this.interactionRange = 1;
     this.attackAnim = 0;
     this.nextPlayerAttackTick = 0;
+    this.combatStyle = "balanced";
     this.moveCycle = 0;
     this.hitsplats = [];
     this.inventory = Array(BAG_SLOTS).fill(null);
@@ -90,6 +91,7 @@ export class ElderSoulsGame {
       '<section class="panel left-panel">',
       '<h2>Character</h2><div id="character"></div>',
       '<h2>Combat Stats</h2><div id="combat-stats"></div>',
+      '<div id="combat-styles" class="combat-styles"></div>',
       '<h2>Skills</h2><div id="skills"></div>',
       '</section>',
       '<section class="panel right-panel">',
@@ -116,6 +118,7 @@ export class ElderSoulsGame {
     this.ui = {
       character: this.root.querySelector("#character"),
       combatStats: this.root.querySelector("#combat-stats"),
+      combatStyles: this.root.querySelector("#combat-styles"),
       skills: this.root.querySelector("#skills"),
       target: this.root.querySelector("#target"),
       runToggle: this.root.querySelector("#run-toggle"),
@@ -995,6 +998,15 @@ export class ElderSoulsGame {
 
     this.ui.runToggle.addEventListener("click", () => this.toggleRun());
 
+    this.ui.combatStyles.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-combat-style]");
+      if (!button) return;
+      this.combatStyle = button.dataset.combatStyle;
+      this.log("Combat stance: " + button.textContent + ".");
+      this.saveGame();
+      this.renderUI();
+    });
+
     this.ui.inventory.addEventListener("click", (event) => {
       const slot = event.target.closest("[data-bag-slot]");
       if (!slot) return;
@@ -1641,6 +1653,19 @@ export class ElderSoulsGame {
     this.selectedItem = null;
     this.saveGame();
     this.renderUI();
+  }
+
+  getCombatStyleBonuses() {
+    if (this.combatStyle === "edge") {
+      return { accuracy: 4, power: 0, ward: 0 };
+    }
+    if (this.combatStyle === "might") {
+      return { accuracy: 0, power: 4, ward: 0 };
+    }
+    if (this.combatStyle === "guard") {
+      return { accuracy: 0, power: 0, ward: 5 };
+    }
+    return { accuracy: 1, power: 1, ward: 1 };
   }
 
   getEquipmentStats() {
