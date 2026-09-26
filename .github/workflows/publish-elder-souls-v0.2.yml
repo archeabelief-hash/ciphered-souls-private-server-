@@ -8,6 +8,7 @@ on:
       - 'tools/build-elder-souls-pk-training.ps1'
       - 'tools/apply-elder-souls-pk-training.ps1'
       - 'tools/apply-elder-souls-rpg-alpha-branding.ps1'
+      - 'tools/apply-elder-souls-owner-persistence.ps1'
       - 'tools/verify-elder-souls-rpg-alpha-branding.ps1'
 
 permissions:
