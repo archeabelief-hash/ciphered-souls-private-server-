@@ -320,6 +320,7 @@ class Studio(tk.Tk):
         ttk.Label(graphics_header, textvariable=self.graphics_title, font=("Segoe UI", 11, "bold")).pack(side="left")
         ttk.Button(graphics_header, text="Refresh Graphic", command=self.refresh_item_preview).pack(side="right")
         ttk.Button(graphics_header, text="Open Model in Blender", command=self.open_preview_model_in_blender).pack(side="right", padx=(0,6))
+        ttk.Button(graphics_header, text="Install Blender", command=self.install_blender_for_preview).pack(side="right", padx=(0,6))
 
         self.graphics_info = tk.StringVar(value="")
         ttk.Label(self.graphics_tab, textvariable=self.graphics_info, wraplength=700).pack(fill="x", pady=(6,8))
@@ -456,8 +457,134 @@ class Studio(tk.Tk):
             a.game_data["base_id"] = item_id
             self.load_form(a)
             self.status.set(f"Loaded in-game item {item_id}: {a.name}")
+            self.editor_tabs.select(self.graphics_tab)
+            self.refresh_item_preview()
         except Exception as e:
             messagebox.showerror("Open game item failed", str(e))
+
+    def refresh_item_preview(self):
+        if self.vars["asset_type"].get() != "item":
+            self.graphics_title.set("Item graphics")
+            self.graphics_info.set("Open an in-game item first.")
+            self.graphics_preview.configure(image="", text="No item selected")
+            self.preview_photo = None
+            return
+
+        try:
+            data = self._current_game_data()
+            item_id = int(self.vars["asset_id"].get())
+            model_id = int(data.get("model_id", 0))
+            if model_id <= 0:
+                raise ValueError("This item does not have an inventory model ID.")
+
+            self.preview_token += 1
+            token = self.preview_token
+            self.graphics_title.set(f"{self.vars['name'].get()}  •  Item {item_id}")
+            self.graphics_info.set(
+                f"Inventory model {model_id} — rendering the actual 718 cache model. "
+                "Item recolors are applied to the preview when the model materials match the cache colors."
+            )
+            self.graphics_preview.configure(image="", text="Rendering item graphic...\nThis can take a few seconds the first time.")
+            self.preview_photo = None
+            self.editor_tabs.select(self.graphics_tab)
+
+            settings = dict(self.store.settings())
+            recolor_from = list(data.get("recolor_from") or [])
+            recolor_to = list(data.get("recolor_to") or [])
+            model_file = extract_model(model_id, settings)
+            output = PREVIEWS_DIR / f"item_{item_id}_model_{model_id}.png"
+
+            def worker():
+                try:
+                    rendered = render_model_preview(
+                        model_file,
+                        output,
+                        settings,
+                        recolor_from=recolor_from,
+                        recolor_to=recolor_to,
+                        size=420,
+                    )
+                    self.after(0, lambda: self._show_item_preview(rendered, token, model_id))
+                except Exception as exc:
+                    self.after(0, lambda: self._show_item_preview_error(str(exc), token, model_id))
+
+            threading.Thread(target=worker, daemon=True).start()
+        except Exception as e:
+            self.graphics_preview.configure(image="", text="Graphic unavailable")
+            self.preview_photo = None
+            self.graphics_info.set(str(e))
+
+    def _show_item_preview(self, path, token, model_id):
+        if token != self.preview_token:
+            return
+        try:
+            photo = tk.PhotoImage(file=str(path))
+            self.preview_photo = photo
+            self.graphics_preview.configure(image=photo, text="")
+            self.graphics_info.set(
+                f"Model {model_id} rendered from the installed Elder Souls 718 cache. "
+                "Use Colors or Item Attributes, then Refresh Graphic to preview your current edit."
+            )
+            self.status.set("Item graphic loaded")
+        except Exception as e:
+            self._show_item_preview_error(str(e), token, model_id)
+
+    def _show_item_preview_error(self, error, token, model_id):
+        if token != self.preview_token:
+            return
+        self.preview_photo = None
+        self.graphics_preview.configure(
+            image="",
+            text="3D graphic preview needs Blender.\nUse Install Blender, then click Refresh Graphic."
+        )
+        self.graphics_info.set(f"Model {model_id}. Preview error: {error}")
+        self.status.set("Item graphic preview unavailable")
+
+    def open_preview_model_in_blender(self):
+        if self.vars["asset_type"].get() != "item":
+            messagebox.showinfo("Item graphics", "Open an in-game item first.")
+            return
+        try:
+            data = self._current_game_data()
+            model_id = int(data.get("model_id", 0))
+            if model_id <= 0:
+                raise ValueError("This item does not have an inventory model.")
+            p = extract_model(model_id, self.store.settings())
+            open_in_blender(p, self.store.settings())
+            self.status.set(f"Opened item model {model_id} in Blender")
+        except Exception as e:
+            messagebox.showerror("Open item graphic failed", str(e))
+
+    def install_blender_for_preview(self):
+        try:
+            try:
+                blender = find_blender(self.store.settings())
+                messagebox.showinfo("Blender ready", f"Blender is already installed:\n{blender}")
+                return
+            except Exception:
+                pass
+
+            winget = shutil.which("winget")
+            if not winget:
+                raise FileNotFoundError(
+                    "Windows Package Manager (winget) was not found. Install Blender manually, then choose blender.exe in Settings."
+                )
+
+            subprocess.Popen([
+                winget, "install",
+                "--id", "BlenderFoundation.Blender",
+                "-e",
+                "--accept-package-agreements",
+                "--accept-source-agreements",
+                "--silent",
+            ])
+            messagebox.showinfo(
+                "Installing Blender",
+                "Blender installation has started. When it finishes, click Refresh Graphic."
+            )
+            self.status.set("Blender installation started")
+        except Exception as e:
+            messagebox.showerror("Blender install failed", str(e))
 
     @staticmethod
     def _hex_to_hsl16(value):
