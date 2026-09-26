@@ -214,38 +214,205 @@ export class ElderSoulsGame {
 
   createHumanoid(clothColor, skinColor, trimColor) {
     const root = new THREE.Group();
-    const bodyMat = new THREE.MeshLambertMaterial({ color: clothColor, flatShading: true });
-    const skinMat = new THREE.MeshLambertMaterial({ color: skinColor, flatShading: true });
-    const trimMat = new THREE.MeshLambertMaterial({ color: trimColor, flatShading: true });
 
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.72, 1.35, 6), bodyMat);
-    torso.position.y = 1.45;
+    const clothMat = new THREE.MeshStandardMaterial({
+      color: clothColor,
+      roughness: 0.78,
+      metalness: 0.02
+    });
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: skinColor,
+      roughness: 0.72,
+      metalness: 0
+    });
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: trimColor,
+      roughness: 0.72,
+      metalness: 0.05
+    });
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x17130f,
+      roughness: 0.66,
+      metalness: 0.08
+    });
+    const eyeMat = new THREE.MeshStandardMaterial({
+      color: 0x201810,
+      roughness: 0.35
+    });
+
+    const body = new THREE.Group();
+    root.add(body);
+
+    const torso = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.52, 0.66, 1.18, 12),
+      clothMat
+    );
+    torso.position.y = 1.55;
     torso.castShadow = true;
-    root.add(torso);
+    body.add(torso);
 
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.18, 8), trimMat);
-    belt.position.y = 0.83;
-    root.add(belt);
+    const shoulders = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.24, 1.05, 5, 10),
+      clothMat
+    );
+    shoulders.rotation.z = Math.PI / 2;
+    shoulders.position.y = 1.92;
+    shoulders.scale.z = 0.9;
+    shoulders.castShadow = true;
+    body.add(shoulders);
 
-    const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.43, 0), skinMat);
-    head.position.y = 2.42;
+    const belt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.65, 0.65, 0.16, 12),
+      trimMat
+    );
+    belt.position.y = 0.98;
+    belt.castShadow = true;
+    body.add(belt);
+
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.20, 0.24, 10),
+      skinMat
+    );
+    neck.position.y = 2.18;
+    neck.castShadow = true;
+    body.add(neck);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.43, 16, 12),
+      skinMat
+    );
+    head.scale.set(0.92, 1.10, 0.90);
+    head.position.y = 2.56;
     head.castShadow = true;
-    root.add(head);
+    body.add(head);
+
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.08, 0.18, 7),
+      skinMat
+    );
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 2.56, 0.40);
+    nose.castShadow = true;
+    body.add(nose);
 
     for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 1.05, 6), bodyMat);
-      arm.position.set(side * 0.72, 1.42, 0);
-      arm.rotation.z = side * 0.13;
-      arm.castShadow = true;
-      root.add(arm);
-
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.24, 1.1, 6), trimMat);
-      leg.position.set(side * 0.28, 0.15, 0);
-      leg.castShadow = true;
-      root.add(leg);
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.038, 8, 6),
+        eyeMat
+      );
+      eye.position.set(side * 0.145, 2.66, 0.36);
+      body.add(eye);
     }
 
-    root.userData.kind = "player";
+    const leftArmPivot = new THREE.Group();
+    const rightArmPivot = new THREE.Group();
+    leftArmPivot.position.set(-0.66, 1.88, 0);
+    rightArmPivot.position.set(0.66, 1.88, 0);
+    body.add(leftArmPivot, rightArmPivot);
+
+    for (const [pivot, side] of [[leftArmPivot, -1], [rightArmPivot, 1]]) {
+      const upper = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.48, 4, 8),
+        clothMat
+      );
+      upper.position.y = -0.33;
+      upper.rotation.z = side * 0.08;
+      upper.castShadow = true;
+      pivot.add(upper);
+
+      const forearm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.115, 0.43, 4, 8),
+        skinMat
+      );
+      forearm.position.y = -0.92;
+      forearm.castShadow = true;
+      pivot.add(forearm);
+
+      const hand = new THREE.Mesh(
+        new THREE.SphereGeometry(0.14, 10, 8),
+        skinMat
+      );
+      hand.scale.set(0.88, 1.05, 0.82);
+      hand.position.y = -1.28;
+      hand.castShadow = true;
+      pivot.add(hand);
+    }
+
+    const leftLegPivot = new THREE.Group();
+    const rightLegPivot = new THREE.Group();
+    leftLegPivot.position.set(-0.28, 0.94, 0);
+    rightLegPivot.position.set(0.28, 0.94, 0);
+    body.add(leftLegPivot, rightLegPivot);
+
+    for (const pivot of [leftLegPivot, rightLegPivot]) {
+      const thigh = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.16, 0.46, 4, 8),
+        trimMat
+      );
+      thigh.position.y = -0.36;
+      thigh.castShadow = true;
+      pivot.add(thigh);
+
+      const shin = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.14, 0.44, 4, 8),
+        trimMat
+      );
+      shin.position.y = -0.92;
+      shin.castShadow = true;
+      pivot.add(shin);
+
+      const foot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.34, 0.22, 0.58),
+        darkMat
+      );
+      foot.position.set(0, -1.30, 0.11);
+      foot.castShadow = true;
+      pivot.add(foot);
+    }
+
+    const attachments = {};
+    const attachmentNames = [
+      "head",
+      "cape",
+      "neck",
+      "weapon",
+      "body",
+      "offhand",
+      "legs",
+      "hands",
+      "feet",
+      "ring"
+    ];
+
+    for (const name of attachmentNames) {
+      const group = new THREE.Group();
+      attachments[name] = group;
+      body.add(group);
+    }
+
+    attachments.weapon.position.set(0.76, 0.67, 0.04);
+    attachments.offhand.position.set(-0.78, 0.72, 0.02);
+    attachments.head.position.set(0, 2.56, 0);
+    attachments.body.position.set(0, 1.52, 0);
+    attachments.legs.position.set(0, 0.55, 0);
+    attachments.feet.position.set(0, -0.25, 0.10);
+    attachments.neck.position.set(0, 2.14, 0.34);
+    attachments.cape.position.set(0, 1.58, -0.40);
+    attachments.hands.position.set(0, 0.62, 0);
+    attachments.ring.position.set(0.83, 0.63, 0.08);
+
+    root.userData.kind = "humanoid";
+    root.userData.visuals = {
+      body,
+      torso,
+      head,
+      leftArmPivot,
+      rightArmPivot,
+      leftLegPivot,
+      rightLegPivot,
+      attachments
+    };
+
     return root;
   }
 
