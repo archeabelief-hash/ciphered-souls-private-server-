@@ -71,6 +71,9 @@ Write-Host '=== Apply local controller gateway patch ==='
 Write-Host '=== Normalize Elder Souls RPG Alpha branding and paths ==='
 ./tools/apply-elder-souls-rpg-alpha-branding.ps1
 
+Write-Host '=== Enable persistent accounts and master owner account ==='
+./tools/apply-elder-souls-owner-persistence.ps1
+
 Write-Host '=== Verify no stale user-facing Matrix branding remains ==='
 ./tools/verify-elder-souls-rpg-alpha-branding.ps1
 
@@ -230,7 +233,7 @@ class UpdateForm : Form {
 }
 
 class Launcher {
-  const string CurrentVersion="0.1.2";
+  const string CurrentVersion="0.1.3";
   const string ReleasePrefix="elder-souls-rpg-alpha-v";
   const string SetupAssetName="Elder-Souls-RPG-Alpha-Setup.exe";
   const string ReleasesApi="https://api.github.com/repos/archeabelief-hash/ciphered-souls-private-server-/releases?per_page=30";
@@ -335,6 +338,34 @@ class Launcher {
     p.Start(); p.BeginOutputReadLine(); p.BeginErrorReadLine(); return p;
   }
 
+  static void CopyDirectory(string source,string destination){
+    Directory.CreateDirectory(destination);
+    foreach(var file in Directory.GetFiles(source)){
+      var target=Path.Combine(destination,Path.GetFileName(file));
+      if(!File.Exists(target)) File.Copy(file,target,false);
+    }
+    foreach(var dir in Directory.GetDirectories(source)){
+      CopyDirectory(dir,Path.Combine(destination,Path.GetFileName(dir)));
+    }
+  }
+
+  static void EnsurePersistentWorld(string serverDir){
+    try{
+      var local=Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+      var persistent=Path.Combine(local,"ElderSoulsRPGAlphaData","world");
+      var worldZero=Path.Combine(persistent,"0");
+      if(!Directory.Exists(worldZero)){
+        var bundled=Path.Combine(serverDir,"data","world");
+        if(Directory.Exists(bundled)) CopyDirectory(bundled,persistent);
+        Directory.CreateDirectory(worldZero);
+      }
+    }catch(Exception ex){
+      MessageBox.Show("Persistent account storage could not be prepared.\n\n"+ex.Message,
+        "Elder Souls RPG Alpha");
+      throw;
+    }
+  }
+
   static bool WaitPort(int port,Process server){
     for(int i=0;i<180;i++){
       if(server.HasExited)return false;
@@ -365,6 +396,7 @@ class Launcher {
       string clientDir=Path.Combine(root,"client");
       string logs=Path.Combine(root,"logs");
       Directory.CreateDirectory(logs);
+      EnsurePersistentWorld(serverDir);
 
       Process server=null;
       try{
@@ -436,7 +468,7 @@ $iss=@'
 [Setup]
 AppId={{C2F21E7A-1D13-4B9A-AE71-9A7180000001}
 AppName=Elder Souls RPG Alpha
-AppVersion=0.1.2
+AppVersion=0.1.3
 AppPublisher=Elder Souls RPG
 DefaultDirName={localappdata}\Programs\Elder Souls RPG Alpha
 DefaultGroupName=Elder Souls RPG Alpha
@@ -465,12 +497,12 @@ Set-Content installer.iss $iss
 if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
 Get-FileHash output/Elder-Souls-RPG-Alpha-Setup.exe -Algorithm SHA256 | Format-List | Out-File output/SHA256.txt
 
-Write-Host '=== Publish Elder Souls RPG Alpha 0.1.2 ==='
+Write-Host '=== Publish Elder Souls RPG Alpha 0.1.3 ==='
 if(-not $env:GH_TOKEN){throw 'GH_TOKEN is required to publish release'}
-$tag='elder-souls-rpg-alpha-v0.1.2'
+$tag='elder-souls-rpg-alpha-v0.1.3'
 gh release delete $tag --yes 2>$null
 $global:LASTEXITCODE=0
-gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha 0.1.2' --notes 'Elder Souls RPG Alpha begins here. Self-contained local 718 client/server build with normalized Elder Souls branding and filesystem paths, bundled runtime/cache, training hub, custom prototype equipment, and local controller gateway.'
+gh release create $tag 'output/Elder-Souls-RPG-Alpha-Setup.exe' 'output/SHA256.txt' --title 'Elder Souls RPG Alpha 0.1.3' --notes 'Elder Souls RPG Alpha 0.1.3 adds persistent LocalAppData account/world saves, automatic first-run migration from the installed world data, and a one-time ::claimowner command for the permanent local master owner account. Existing GitHub auto-update, 718 client/server, custom item fixes, training hub, and local controller gateway remain included.'
 if($LASTEXITCODE -ne 0){throw 'GitHub release publish failed'}
 
 Write-Host 'BUILD COMPLETE: output/Elder-Souls-RPG-Alpha-Setup.exe'
