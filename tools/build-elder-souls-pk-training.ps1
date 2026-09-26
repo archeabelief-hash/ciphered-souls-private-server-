@@ -104,7 +104,7 @@ if(Test-Path recovered/client/src/main/resources){& jar --update --file build/el
 
 Write-Host '=== Assemble app and full cache ==='
 $root='dist/Elder Souls Scape PK Training 718'
-New-Item -ItemType Directory -Force "$root/server/data/cache","$root/server/lib","$root/client/lib","$root/logs" | Out-Null
+New-Item -ItemType Directory -Force "$root/server/data/cache","$root/server/lib","$root/client/lib","$root/logs","$root/agent" | Out-Null
 Copy-Item build/elder-souls-scape-pk-training-server.jar "$root/server/"
 Copy-Item build/elder-souls-scape-pk-training-client.jar "$root/client/"
 Copy-Item recovered/server/data/* "$root/server/data/" -Recurse -Force
@@ -115,6 +115,7 @@ Copy-Item deps/*.jar "$root/server/lib/" -Force
 Copy-Item recovered/client/lib/* "$root/client/lib/" -Force
 Copy-Item deps/slf4j-api-1.7.7.jar "$root/client/lib/" -Force
 Copy-Item deps/jsr305-3.0.2.jar "$root/client/lib/" -Force
+Copy-Item agent/* "$root/agent/" -Recurse -Force
 
 $cache=@{
     'main_file_cache.dat2'='1RnuylAaBrJloewHYe1RI5mlD3sy3MvzA';
