@@ -1,15 +1,12 @@
 import * as THREE from "three";
 import { SKILLS, createSkillState, levelForXp } from "./data/skills.js";
+import { EQUIPMENT_SLOTS, ITEMS, ITEM_BY_ID, cloneItem, itemStatsText } from "./data/items.js";
 
 const TICK_MS = 600;
 const WORLD_SIZE = 74;
-
-const ITEMS = {
-  BRONZE_KHOPESH: { id: 1001, name: "Ash-Bronze Khopesh", type: "weapon" },
-  LOG: { id: 2001, name: "Ashwood Log", type: "resource" },
-  ORE: { id: 2002, name: "Dusk Ore", type: "resource" },
-  TROUT: { id: 2003, name: "Riverfin", type: "food" }
-};
+const BAG_SLOTS = 28;
+const BANK_SLOTS = 240;
+const SAVE_KEY = "elderSoulsSaveV2";
 
 export class ElderSoulsGame {
   constructor(root) {
@@ -24,7 +21,7 @@ export class ElderSoulsGame {
     this.pendingAction = null;
     this.playerTarget = new THREE.Vector3(0, 0, 0);
     this.inventory = [
-      { ...ITEMS.BRONZE_KHOPESH, amount: 1 }
+      cloneItem(ITEMS.ASH_BRONZE_KHOPESH, 1)
     ];
     this.equipment = { weapon: null };
     this.skills = createSkillState();
@@ -232,7 +229,7 @@ export class ElderSoulsGame {
       name: "Ashwood Tree",
       skill: "timbering",
       xp: 18,
-      item: ITEMS.LOG,
+      item: ITEMS.ASHWOOD_LOG,
       hp: 3,
       maxHp: 3,
       respawnTicks: 12,
@@ -258,7 +255,7 @@ export class ElderSoulsGame {
       name: "Dusk Ore Vein",
       skill: "quarrying",
       xp: 22,
-      item: ITEMS.ORE,
+      item: ITEMS.DUSK_ORE,
       hp: 4,
       maxHp: 4,
       respawnTicks: 16,
