@@ -135,8 +135,11 @@ export class ElderSoulsGame {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.08;
 
-    const hemi = new THREE.HemisphereLight(0xb9c0ad, 0x332819, 1.5);
+    const hemi = new THREE.HemisphereLight(0xc9d4c5, 0x2b2118, 1.7);
     this.scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xffe1a1, 2.2);
     sun.position.set(-18, 34, 12);
