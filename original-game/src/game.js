@@ -1003,15 +1003,37 @@ export class ElderSoulsGame {
     const delta = this.playerTarget.clone().sub(this.player.position);
     delta.y = 0;
     const dist = delta.length();
+    const visuals = this.player.userData.visuals;
+
     if (dist > 0.08) {
       const step = Math.min(dist, 4.0 * dt);
       delta.normalize();
       this.player.position.addScaledVector(delta, step);
       this.player.rotation.y = Math.atan2(delta.x, delta.z);
-    } else if (this.pendingAction) {
-      const target = this.pendingAction.group.position;
-      if (this.distance2D(this.player.position, target) <= 2.5) {
-        this.beginInteraction(this.pendingAction);
+
+      if (visuals) {
+        const swing = Math.sin(performance.now() * 0.0125) * 0.48;
+        visuals.leftArmPivot.rotation.x = swing;
+        visuals.rightArmPivot.rotation.x = -swing;
+        visuals.leftLegPivot.rotation.x = -swing * 0.72;
+        visuals.rightLegPivot.rotation.x = swing * 0.72;
+        visuals.body.position.y = Math.abs(Math.sin(performance.now() * 0.0125)) * 0.035;
+      }
+    } else {
+      if (visuals) {
+        const settle = Math.min(1, dt * 10);
+        visuals.leftArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.leftArmPivot.rotation.x, 0, settle);
+        visuals.rightArmPivot.rotation.x = THREE.MathUtils.lerp(visuals.rightArmPivot.rotation.x, 0, settle);
+        visuals.leftLegPivot.rotation.x = THREE.MathUtils.lerp(visuals.leftLegPivot.rotation.x, 0, settle);
+        visuals.rightLegPivot.rotation.x = THREE.MathUtils.lerp(visuals.rightLegPivot.rotation.x, 0, settle);
+        visuals.body.position.y = THREE.MathUtils.lerp(visuals.body.position.y, 0, settle);
+      }
+
+      if (this.pendingAction) {
+        const target = this.pendingAction.group.position;
+        if (this.distance2D(this.player.position, target) <= 2.5) {
+          this.beginInteraction(this.pendingAction);
+        }
       }
     }
   }
