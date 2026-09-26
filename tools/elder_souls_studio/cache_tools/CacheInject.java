@@ -217,7 +217,17 @@ public final class CacheInject {
 
     private static String esc(String s) {
         if (s == null) return "";
-        return s.replace("\\","\\\\").replace(""","\\\"").replace("\r","\\r").replace("\n","\\n").replace("\t","\\t");
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch == '\\') out.append("\\\\");
+            else if (ch == '"') out.append("\\\"");
+            else if (ch == '\r') out.append("\\r");
+            else if (ch == '\n') out.append("\\n");
+            else if (ch == '\t') out.append("\\t");
+            else out.append(ch);
+        }
+        return out.toString();
     }
 
     private static String arr(String[] values) {
