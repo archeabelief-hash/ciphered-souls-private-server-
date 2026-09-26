@@ -1374,19 +1374,27 @@ export class ElderSoulsGame {
   processActionTick() {
     const action = this.pendingAction;
     if (!action) return;
-    if (this.distance2D(this.player.position, action.group.position) > 2.6) return;
+    if (this.pathQueue.length || this.currentMoveTarget) return;
+
+    const playerTile = this.getPlayerTile();
+    const actionTile = worldToTile(action.group.position.x, action.group.position.z);
+    const range = action.kind === "bank" ? 2 : 1;
+    if (tileDistance(playerTile, actionTile) > range) return;
 
     if (action.kind === "resource") {
       if (!action.active) {
         this.pendingAction = null;
         return;
       }
+
       action.hp--;
-      this.log(`You work the ${action.name}.`);
+      this.log("You work the " + action.name + ".");
+
       if (action.hp <= 0) {
         action.active = false;
         action.group.visible = false;
         action.respawnTicksLeft = action.respawnTicks;
+
         const stored = this.addItem(action.item, 1);
         if (stored) {
           this.addXp(action.skill, action.xp);
@@ -1394,42 +1402,68 @@ export class ElderSoulsGame {
         } else {
           this.log("Your field bag is full.", "bad");
         }
+
         this.pendingAction = null;
       }
       return;
     }
 
-    if (action.kind === "npc") {
-      if (!action.alive) {
-        this.pendingAction = null;
-        return;
-      }
-      const totals = this.getEquipmentStats();
-      const attack = this.skills.bladework.level + totals.accuracy;
-      const force = this.skills.force.level + totals.power;
-      const maxHit = Math.max(2, Math.floor(2 + force * 0.72 + attack * 0.2));
-      const damage = Math.max(1, Math.floor(Math.random() * (maxHit + 1)));
-      action.hp = Math.max(0, action.hp - damage);
-      this.attackAnim = 0.34;
-      this.player.rotation.y = Math.atan2(
-        action.group.position.x - this.player.position.x,
-        action.group.position.z - this.player.position.z
-      );
-      this.createHitsplat(damage, action.group, false);
+    if (action.kind !== "npc") return;
+    if (!action.alive) {
+      this.pendingAction = null;
+      return;
+    }
+    if (this.state.tick < this.nextPlayerAttackTick) return;
+
+    const totals = this.getEquipmentStats();
+    const accuracy = this.skills.bladework.level + totals.accuracy;
+    const force = this.skills.force.level + totals.power;
+    const targetDefense = 4 + action.combatLevel * 1.7;
+    const hitChance = THREE.MathUtils.clamp(
+      0.48 + (accuracy - targetDefense) * 0.025,
+      0.12,
+      0.93
+    );
+
+    const maxHit = Math.max(2, Math.floor(2 + force * 0.72 + accuracy * 0.2));
+    const landed = Math.random() <= hitChance;
+    const damage = landed ? Math.floor(Math.random() * (maxHit + 1)) : 0;
+
+    const weapon = this.equipment.weapon;
+    const speed = Math.max(2, Number(weapon && weapon.attackSpeedTicks || 4));
+    this.nextPlayerAttackTick = this.state.tick + speed;
+
+    action.hp = Math.max(0, action.hp - damage);
+    this.attackAnim = 0.34;
+    this.player.rotation.y = Math.atan2(
+      action.group.position.x - this.player.position.x,
+      action.group.position.z - this.player.position.z
+    );
+
+    this.createHitsplat(damage, action.group, false);
+
+    if (damage > 0) {
       this.addXp("bladework", damage * 1.2);
       this.addXp("force", damage * 1.1);
       this.addXp("vitality", damage * 0.45);
-      this.log(`You strike ${action.name} for ${damage}.`, "xp");
+      this.log("You strike " + action.name + " for " + damage + ".", "xp");
+    } else {
+      this.log("Your attack misses " + action.name + ".");
+    }
 
-      if (action.hp <= 0) {
-        action.alive = false;
-        action.group.visible = false;
-        action.respawnTicks = 16;
-        this.addXp("bountycraft", Math.max(5, action.combatLevel * 2));
-        this.state.coins += 3 + action.combatLevel;
-        this.log(`${action.name} falls. You recover ${3 + action.combatLevel} dusk marks.`, "good");
-        this.pendingAction = null;
-      }
+    if (action.hp <= 0) {
+      action.alive = false;
+      action.group.visible = false;
+      action.respawnTicks = 16;
+      this.addXp("bountycraft", Math.max(5, action.combatLevel * 2));
+
+      const reward = 3 + action.combatLevel;
+      this.state.coins += reward;
+      this.log(action.name + " falls. You recover " + reward + " dusk marks.", "good");
+
+      this.pendingAction = null;
+      this.selected = null;
+      this.selectionMarker.visible = false;
     }
   }
 
@@ -1437,26 +1471,47 @@ export class ElderSoulsGame {
     for (const npc of this.npcs) {
       if (!npc.alive) continue;
       if (this.pendingAction !== npc) continue;
-      if (this.distance2D(this.player.position, npc.group.position) > 2.8) continue;
+      if (this.pathQueue.length || this.currentMoveTarget) continue;
+
+      const playerTile = this.getPlayerTile();
+      const npcTile = worldToTile(npc.group.position.x, npc.group.position.z);
+      if (tileDistance(playerTile, npcTile) > 1) continue;
+      if (this.state.tick < npc.nextAttackTick) continue;
+
       const totals = this.getEquipmentStats();
-      const ward = this.skills.ward.level;
-      const mitigation = Math.floor((totals.armor + totals.ward + ward) / 8);
+      const defense = this.skills.ward.level + totals.armor + totals.ward;
+      const npcAccuracy = 5 + npc.combatLevel * 1.6;
+      const hitChance = THREE.MathUtils.clamp(
+        0.47 + (npcAccuracy - defense) * 0.022,
+        0.10,
+        0.90
+      );
+
       const rawMax = Math.max(1, Math.floor(2 + npc.combatLevel * 0.65));
-      const max = Math.max(1, rawMax - mitigation);
-      const damage = Math.floor(Math.random() * (max + 1));
+      const mitigation = Math.floor((totals.armor + totals.ward) / 10);
+      const maxHit = Math.max(1, rawMax - mitigation);
+      const landed = Math.random() <= hitChance;
+      const damage = landed ? Math.floor(Math.random() * (maxHit + 1)) : 0;
+
+      npc.nextAttackTick = this.state.tick + Math.max(2, npc.attackSpeedTicks || 4);
+      npc.attackAnim = 0.34;
+      npc.group.rotation.y = Math.atan2(
+        this.player.position.x - npc.group.position.x,
+        this.player.position.z - npc.group.position.z
+      );
+
+      this.createHitsplat(damage, this.player, true);
+
       if (damage > 0) {
         this.hp = Math.max(0, this.hp - damage);
-        npc.attackAnim = 0.34;
-        npc.group.rotation.y = Math.atan2(
-          this.player.position.x - npc.group.position.x,
-          this.player.position.z - npc.group.position.z
-        );
-        this.createHitsplat(damage, this.player, true);
-        this.log(`${npc.name} hits you for ${damage}.`, "bad");
+        this.log(npc.name + " hits you for " + damage + ".", "bad");
+      } else {
+        this.log(npc.name + " misses you.");
       }
+
       if (this.hp <= 0) {
         this.log("You collapse. The shrine recalls your soul.", "bad");
-        this.hp = this.maxHp;
+        this.hp = this.getDisplayedMaxHp();
         this.player.position.set(0, 0, 0);
         this.playerTarget.set(0, 0, 0);
         this.pathQueue = [];
@@ -1466,6 +1521,8 @@ export class ElderSoulsGame {
         this.selectionMarker.visible = false;
         this.pendingAction = null;
         this.selected = null;
+        this.nextPlayerAttackTick = this.state.tick + 2;
+        break;
       }
     }
   }
